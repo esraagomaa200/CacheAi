@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShieldAlert } from "lucide-react";
 import AppearanceControls from "../components/AppearanceControls";
+import useTheme from "../theme/useTheme";
 import {
   API_BASE_URL,
   formatApiError,
@@ -16,6 +17,7 @@ const GOOGLE_CLIENT_ID = "832987608983-d0g7flf8phslosqpjhmvpddgsc6t1vdi.apps.goo
 export default function EmergencyAuth() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const buttonRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
@@ -79,13 +81,7 @@ export default function EmergencyAuth() {
         callback: handleCredentialResponse,
       });
 
-      window.google.accounts.id.renderButton(buttonRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        width: 320,
-        text: "continue_with",
-      });
+      renderGoogleButton();
     };
 
     document.body.appendChild(script);
@@ -95,6 +91,30 @@ export default function EmergencyAuth() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // GSI draws its own button — it must follow the app theme and fill the
+  // card's actual width, and get redrawn whenever the theme toggles.
+  function renderGoogleButton() {
+    if (!window.google || !buttonRef.current) return;
+
+    const width = Math.min(
+      Math.max(buttonRef.current.offsetWidth || 320, 200),
+      400
+    );
+
+    window.google.accounts.id.renderButton(buttonRef.current, {
+      type: "standard",
+      theme: theme === "dark" ? "filled_black" : "outline",
+      size: "large",
+      width,
+      text: "continue_with",
+    });
+  }
+
+  useEffect(() => {
+    renderGoogleButton();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
@@ -118,7 +138,7 @@ export default function EmergencyAuth() {
 
           {/* Google renders its own button here */}
           <div className="mt-7 flex justify-center">
-            <div ref={buttonRef} />
+            <div ref={buttonRef} className="flex justify-center" />
           </div>
 
           {loading && (

@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, HeartPulse } from "lucide-react";
 
 import logo2 from "../assets/icons/Logo2.png";
 import AppearanceControls from "../components/AppearanceControls";
+import useTheme from "../theme/useTheme";
 import { getApiErrorKey } from "../i18n/api-error";
 import {
   API_BASE_URL,
@@ -25,6 +26,7 @@ const inputBase =
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const googleButtonRef = useRef(null);
 
   const [email, setEmail] = useState("");
@@ -114,13 +116,7 @@ export default function Login() {
         callback: handleCredentialResponse,
       });
 
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        width: 320,
-        text: "continue_with",
-      });
+      renderGoogleButton();
     };
 
     document.body.appendChild(script);
@@ -130,6 +126,30 @@ export default function Login() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // GSI draws its own button — it must follow the app theme and fill the
+  // card's actual width, and get redrawn whenever the theme toggles.
+  function renderGoogleButton() {
+    if (!window.google || !googleButtonRef.current) return;
+
+    const width = Math.min(
+      Math.max(googleButtonRef.current.offsetWidth || 320, 200),
+      400
+    );
+
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      type: "standard",
+      theme: theme === "dark" ? "filled_black" : "outline",
+      size: "large",
+      width,
+      text: "continue_with",
+    });
+  }
+
+  useEffect(() => {
+    renderGoogleButton();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
@@ -238,7 +258,7 @@ export default function Login() {
 
           {/* Google renders its own button here */}
           <div className="flex justify-center">
-            <div ref={googleButtonRef} />
+            <div ref={googleButtonRef} className="flex justify-center" />
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-500">
