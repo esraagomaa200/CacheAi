@@ -194,7 +194,7 @@ function SidebarProfile() {
 
     <LuChevronRight
       size={16}
-      className="shrink-0 text-[#D94B4B] transition-transform duration-200 group-hover:translate-x-0.5"
+      className="rtl-flip shrink-0 text-[#D94B4B] transition-transform duration-200 group-hover:translate-x-0.5"
     />
 
   </button>

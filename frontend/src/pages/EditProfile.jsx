@@ -438,7 +438,7 @@ function EditProfile() {
               "
             >
 
-              <ArrowLeft size={16} />
+              <ArrowLeft size={16} className="rtl-flip" />
 
               {t("profile.backToProfile")}
 
@@ -531,7 +531,7 @@ function EditProfile() {
 
                       <input
                         type="text"
-                        dir="auto"
+                        dir="ltr"
                         className={inputBase}
                         placeholder={t("profile.placeholders.patientId")}
                         value={
@@ -558,7 +558,7 @@ function EditProfile() {
 
                       <input
                         type="email"
-                        dir="auto"
+                        dir="ltr"
                         className={inputBase}
                         placeholder={t("profile.placeholders.email")}
                         value={
@@ -937,7 +937,7 @@ function EditProfile() {
 
                       <input
                         type="tel"
-                        dir="auto"
+                        dir="ltr"
                         className={inputBase}
                         placeholder={t("profile.placeholders.phoneNumber")}
                         value={
@@ -966,7 +966,7 @@ function EditProfile() {
 
                         <input
                           type="email"
-                          dir="auto"
+                          dir="ltr"
                           className={inputBase}
                           placeholder={t("profile.placeholders.emergencyEmail")}
                           value={

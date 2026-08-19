@@ -329,6 +329,7 @@ const handleSubmit = async (e) => {
     <Field label={t("signup.fields.patientId")}>
       <InputShell icon={CreditCard}>
         <input
+          dir="ltr"
           className={inputBase}
           placeholder={t("signup.placeholders.patientId")}
           value={formData.patientId}
@@ -412,6 +413,7 @@ const handleSubmit = async (e) => {
       <InputShell icon={Mail}>
         <input
           type="email"
+          dir="ltr"
           className={inputBase}
           placeholder={t("signup.placeholders.email")}
           value={formData.email}
@@ -437,6 +439,7 @@ const handleSubmit = async (e) => {
 
         <input
           type={showPassword ? "text" : "password"}
+          dir="ltr"
           className={`${inputBase} pr-10`}
           placeholder={t("signup.placeholders.password")}
           value={formData.password}
@@ -617,6 +620,7 @@ const handleSubmit = async (e) => {
 
             <InputShell icon={Smartphone}>
               <input
+                dir="ltr"
                 className={inputBase}
                 placeholder={t("signup.placeholders.emergencyPhone")}
                 value={formData.emergencyPhone}
@@ -637,6 +641,7 @@ const handleSubmit = async (e) => {
             <InputShell icon={Mail}>
               <input
                 type="email"
+                dir="ltr"
                 className={inputBase}
                 placeholder={t("signup.placeholders.emergencyEmail")}
                 value={formData.emergencyEmail}
@@ -716,7 +721,7 @@ const handleSubmit = async (e) => {
       >
         {submitting ? t("signup.creatingAccount") : t("signup.createAccount")}
 
-        <ArrowRight className="w-4 h-4" />
+        <ArrowRight className="rtl-flip w-4 h-4" />
       </button>
 
       {/* Sign In */}

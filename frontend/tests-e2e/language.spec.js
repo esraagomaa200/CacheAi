@@ -182,3 +182,40 @@ test("translates authenticated page families while preserving dynamic content", 
     page.getByRole("heading", { name: "مساعدة الطوارئ" })
   ).toBeVisible();
 });
+
+test("moves navigation and keeps its border on the content edge", async ({
+  page,
+  request,
+}) => {
+  const user = await registerUser(request, { name: "RTL Geometry User" });
+  await seedAuth(page, user.token);
+  await page.addInitScript(() => localStorage.setItem("najda-language", "ar"));
+  await page.goto("/profile");
+
+  const viewport = page.viewportSize();
+  const arabicBox = await page.locator("aside").boundingBox();
+  expect(arabicBox.x).toBeGreaterThan(viewport.width / 2);
+  const arabicBorders = await page.locator("aside").evaluate((aside) => {
+    const style = getComputedStyle(aside);
+    return { left: style.borderLeftWidth, right: style.borderRightWidth };
+  });
+  expect(arabicBorders.left).not.toBe("0px");
+  expect(arabicBorders.right).toBe("0px");
+
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+  await page.getByRole("button", { name: "التبديل إلى الإنجليزية" }).click();
+  const englishBox = await page.locator("aside").boundingBox();
+  expect(englishBox.x).toBeLessThan(viewport.width / 4);
+  const englishBorders = await page.locator("aside").evaluate((aside) => {
+    const style = getComputedStyle(aside);
+    return { left: style.borderLeftWidth, right: style.borderRightWidth };
+  });
+  expect(englishBorders.left).toBe("0px");
+  expect(englishBorders.right).not.toBe("0px");
+});

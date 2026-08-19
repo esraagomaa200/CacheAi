@@ -68,7 +68,7 @@ function Hero() {
               {checkingAuth ? t("common.checking") : t("home.startChatting")}
               <ArrowRight
                 size={19}
-                className="transition-transform duration-300 group-hover:translate-x-1"
+                className="rtl-flip transition-transform duration-300 group-hover:translate-x-1"
               />
             </button>
 

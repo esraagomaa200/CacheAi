@@ -328,7 +328,7 @@ function Profile() {
 
                       <Mail size={15} />
 
-                      <span dir="auto">
+                      <span dir="ltr">
                         {profile.email || t("profile.emptyValue")}
                       </span>
 
@@ -341,7 +341,7 @@ function Profile() {
 
                       <span>
                         {t("profile.fields.patientId")}: {" "}
-                        <span dir="auto">
+                        <span dir="ltr">
                           {profile.patientId || t("profile.emptyValue")}
                         </span>
                       </span>
@@ -475,11 +475,13 @@ function Profile() {
                 <InfoRow
                   label={t("profile.fields.patientId")}
                   value={profile.patientId}
+                  valueDir="ltr"
                 />
 
                 <InfoRow
                   label={t("profile.fields.email")}
                   value={profile.email}
+                  valueDir="ltr"
                 />
 
                 <InfoRow
@@ -597,11 +599,13 @@ function Profile() {
                 <InfoRow
                   label={t("profile.fields.phoneNumber")}
                   value={profile.emergencyPhone}
+                  valueDir="ltr"
                 />
 
                 <InfoRow
                   label={t("profile.fields.email")}
                   value={profile.emergencyEmail}
+                  valueDir="ltr"
                   last
                 />
 
@@ -696,7 +700,7 @@ function Profile() {
 
             <ChevronRight
               size={18}
-              className="text-[#78908A]"
+              className="rtl-flip text-[#78908A]"
             />
 
           </div>
@@ -763,6 +767,7 @@ function InfoRow({
   label,
   value,
   last = false,
+  valueDir = "auto",
 }) {
   const { t } = useTranslation();
 
@@ -785,7 +790,7 @@ function InfoRow({
 
       <span
         className="break-words text-[14px] font-medium text-[#263746]"
-        dir="auto"
+        dir={valueDir}
       >
         {value || t("profile.emptyValue")}
       </span>

@@ -167,6 +167,7 @@ export default function Login() {
                 <Mail className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="email"
+                  dir="ltr"
                   autoComplete="email"
                   className={inputBase}
                   placeholder={t("auth.emailPlaceholder")}
@@ -186,6 +187,7 @@ export default function Login() {
                 <Lock className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  dir="ltr"
                   autoComplete="current-password"
                   className={`${inputBase} pr-10`}
                   placeholder={t("auth.passwordPlaceholder")}
