@@ -62,6 +62,7 @@ const OUTPUT_SAMPLE_RATE = 24000;
 const STATUS_LABELS = {
   connecting: "بيتصل…",
   connected: "متوصل 🎙️",
+  reconnecting: "بيعيد الاتصال…",
   ended: "انتهت المكالمة",
   error: "المكالمة فشلت",
 };
@@ -89,6 +90,11 @@ function LiveCall({ onClose }) {
   // Hang-up runs from the close button, the socket's onclose, and unmount —
   // this keeps it exactly-once.
   const teardownDoneRef = useRef(false);
+  // The call ends ONLY when the user ends it (explicit requirement): any
+  // other socket close (Gemini session limits, server restart, network
+  // blips) auto-reconnects while the mic pipeline stays alive.
+  const userEndedRef = useRef(false);
+  const reconnectTimerRef = useRef(null);
 
   const stopPlayback = useCallback(() => {
     scheduledRef.current.forEach((source) => {
@@ -191,6 +197,8 @@ function LiveCall({ onClose }) {
   }, []);
 
   const hangUp = useCallback(() => {
+    userEndedRef.current = true;
+    clearTimeout(reconnectTimerRef.current);
     teardown();
     setStatus((current) => (current === "error" ? current : "ended"));
   }, [teardown]);
@@ -251,14 +259,13 @@ function LiveCall({ onClose }) {
           return;
         }
 
-        const socket = new WebSocket(wsUrl());
-        socket.binaryType = "arraybuffer";
-        wsRef.current = socket;
-
+        // Mic pipeline is built ONCE and sends through wsRef, so it keeps
+        // feeding whichever socket is currently live across reconnects.
         const micSource = micContext.createMediaStreamSource(stream);
         const captureNode = new AudioWorkletNode(micContext, "pcm-capture");
         captureNode.port.onmessage = (event) => {
-          if (socket.readyState === WebSocket.OPEN) {
+          const socket = wsRef.current;
+          if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(event.data);
           }
         };
@@ -271,58 +278,71 @@ function LiveCall({ onClose }) {
         captureNode.connect(silentSink);
         silentSink.connect(micContext.destination);
 
-        socket.onopen = () => {
-          if (!cancelled) {
-            setStatus("connected");
-          }
-        };
-
-        socket.onmessage = (event) => {
-          if (event.data instanceof ArrayBuffer) {
-            playChunk(event.data);
+        function connectSocket() {
+          if (cancelled || userEndedRef.current) {
             return;
           }
 
-          let payload;
-          try {
-            payload = JSON.parse(event.data);
-          } catch {
-            return;
-          }
+          const socket = new WebSocket(wsUrl());
+          socket.binaryType = "arraybuffer";
+          wsRef.current = socket;
 
-          if (payload.type === "transcript" && payload.text) {
-            appendTranscript(payload.role, payload.text);
-          } else if (payload.type === "interrupted") {
+          socket.onopen = () => {
+            if (!cancelled) {
+              setStatus("connected");
+            }
+          };
+
+          socket.onmessage = (event) => {
+            if (event.data instanceof ArrayBuffer) {
+              playChunk(event.data);
+              return;
+            }
+
+            let payload;
+            try {
+              payload = JSON.parse(event.data);
+            } catch {
+              return;
+            }
+
+            if (payload.type === "transcript" && payload.text) {
+              appendTranscript(payload.role, payload.text);
+            } else if (payload.type === "interrupted") {
+              stopPlayback();
+              sealTranscript();
+            } else if (payload.type === "turn_complete") {
+              sealTranscript();
+            }
+            // "error" payloads are not fatal for the UI: the server closes
+            // the socket right after, and onclose reconnects.
+          };
+
+          // onerror is always followed by onclose — reconnection lives there.
+          socket.onerror = () => {};
+
+          socket.onclose = (event) => {
+            if (cancelled || userEndedRef.current) {
+              return;
+            }
+            if (event.code === 4401) {
+              // Auth is genuinely unrecoverable without a new login.
+              setStatus("error");
+              setErrorMessage("الجلسة انتهت. سجّل دخول تاني وابدأ المكالمة من جديد.");
+              teardown();
+              return;
+            }
+            // Session limit / server restart / network blip: the user didn't
+            // hang up, so the call doesn't end — reopen a fresh session.
             stopPlayback();
             sealTranscript();
-          } else if (payload.type === "turn_complete") {
-            sealTranscript();
-          } else if (payload.type === "error") {
-            setStatus("error");
-            setErrorMessage(payload.message || "حصلت مشكلة في المكالمة.");
-          }
-        };
+            setStatus("reconnecting");
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = setTimeout(connectSocket, 1000);
+          };
+        }
 
-        socket.onerror = () => {
-          if (!cancelled) {
-            setStatus((current) => (current === "ended" ? current : "error"));
-            setErrorMessage((current) =>
-              current || "تعذر الاتصال بالخادم. اتأكد إن السيرفر شغال وجرّب تاني."
-            );
-          }
-        };
-
-        socket.onclose = (event) => {
-          if (cancelled) {
-            return;
-          }
-          if (event.code === 4401) {
-            setStatus("error");
-            setErrorMessage("الجلسة انتهت. سجّل دخول تاني وابدأ المكالمة من جديد.");
-          }
-          teardown();
-          setStatus((current) => (current === "error" ? current : "ended"));
-        };
+        connectSocket();
       } catch {
         if (!cancelled) {
           setStatus("error");
@@ -335,6 +355,7 @@ function LiveCall({ onClose }) {
 
     return () => {
       cancelled = true;
+      clearTimeout(reconnectTimerRef.current);
       teardown();
     };
   }, [appendTranscript, playChunk, sealTranscript, stopPlayback, teardown]);
