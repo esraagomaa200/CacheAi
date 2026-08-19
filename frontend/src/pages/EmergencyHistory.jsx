@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   Brain,
@@ -16,43 +17,45 @@ import {
 
 import SidebarProfile from "../components/SidebarProfile";
 import { getAccessToken, listEmergencyEvents } from "../lib/api";
+import { getApiErrorKey } from "../i18n/api-error";
+import { getFormattingLocale } from "../i18n/language";
 
 /* ========================================================= */
 /* STATIC LOOKUPS                                             */
 /* ========================================================= */
 
 const CONDITION_META = {
-  stroke: { label: "جلطة دماغية", icon: Brain },
-  chest_heart: { label: "قلب وصدر", icon: HeartPulse },
-  breathing: { label: "تنفس", icon: Wind },
-  unknown: { label: "غير محدد", icon: HelpCircle },
+  stroke: { translationKey: "emergency.conditions.stroke", icon: Brain },
+  chest_heart: { translationKey: "emergency.conditions.chestHeart", icon: HeartPulse },
+  breathing: { translationKey: "emergency.conditions.breathing", icon: Wind },
+  unknown: { translationKey: "emergency.conditions.unknown", icon: HelpCircle },
 };
 
 const RISK_META = {
-  low: { label: "منخفض", bg: "bg-[#E5F6F0]", text: "text-[#15966B]" },
-  moderate: { label: "متوسط", bg: "bg-amber-50", text: "text-amber-600" },
-  high: { label: "مرتفع", bg: "bg-orange-50", text: "text-orange-600" },
-  emergency: { label: "طارئ", bg: "bg-red-50", text: "text-red-600" },
+  low: { translationKey: "emergency.risk.low", bg: "bg-[#E5F6F0]", text: "text-[#15966B]" },
+  moderate: { translationKey: "emergency.risk.moderate", bg: "bg-amber-50", text: "text-amber-600" },
+  high: { translationKey: "emergency.risk.high", bg: "bg-orange-50", text: "text-orange-600" },
+  emergency: { translationKey: "emergency.risk.emergency", bg: "bg-red-50", text: "text-red-600" },
 };
 
 const STATUS_META = {
-  monitoring: { label: "تحت المراقبة", bg: "bg-[#EAF4FB]", text: "text-[#2A72A8]" },
-  alert_pending: { label: "في انتظار الرد", bg: "bg-amber-50", text: "text-amber-600" },
-  resolved: { label: "تم الاطمئنان", bg: "bg-[#E5F6F0]", text: "text-[#15966B]" },
-  escalated: { label: "تم إبلاغ جهة الاتصال", bg: "bg-red-50", text: "text-red-600" },
+  monitoring: { translationKey: "emergency.status.monitoring", bg: "bg-[#EAF4FB]", text: "text-[#2A72A8]" },
+  alert_pending: { translationKey: "emergency.status.alertPending", bg: "bg-amber-50", text: "text-amber-600" },
+  resolved: { translationKey: "emergency.status.resolved", bg: "bg-[#E5F6F0]", text: "text-[#15966B]" },
+  escalated: { translationKey: "emergency.status.escalated", bg: "bg-red-50", text: "text-red-600" },
 };
 
-function formatDateTime(value) {
-  if (!value) return "—";
+function formatDateTime(value, language) {
+  if (!value) return null;
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return null;
 
-  return date.toLocaleString("ar-EG", {
+  return new Intl.DateTimeFormat(getFormattingLocale(language), {
     dateStyle: "medium",
     timeStyle: "short",
-  });
+  }).format(date);
 }
 
 /* ========================================================= */
@@ -60,6 +63,7 @@ function formatDateTime(value) {
 /* ========================================================= */
 
 function EmergencyHistory() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [events, setEvents] = useState([]);
@@ -77,7 +81,7 @@ function EmergencyHistory() {
     } catch (err) {
       console.error("Failed to load emergency history:", err);
 
-      setError(err.message || "Something went wrong.");
+      setError(getApiErrorKey(err instanceof Error ? err.message : ""));
     } finally {
       setLoading(false);
     }
@@ -125,7 +129,7 @@ function EmergencyHistory() {
             </div>
 
             <p className="text-[15px] font-medium text-[#526572]">
-              Loading emergency history...
+              {t("emergency.history.loading")}
             </p>
 
           </div>
@@ -166,7 +170,7 @@ function EmergencyHistory() {
             </div>
 
             <p className="text-[15px] font-medium text-[#526572]">
-              {error}
+              {t(error)}
             </p>
 
             <button
@@ -187,7 +191,7 @@ function EmergencyHistory() {
               "
             >
               <RefreshCw size={15} />
-              Try Again
+              {t("emergency.history.tryAgain")}
             </button>
 
           </div>
@@ -219,11 +223,11 @@ function EmergencyHistory() {
           <div className="mb-7">
 
             <h1 className="text-[27px] font-bold text-[#182B3A]">
-              Emergency Event History
+              {t("emergency.history.title")}
             </h1>
 
             <p className="mt-1 text-[16px] text-[#64748B]">
-              A record of every emergency assessment and how it was resolved.
+              {t("emergency.history.description")}
             </p>
 
           </div>
@@ -255,6 +259,8 @@ function EmergencyHistory() {
 /* ========================================================= */
 
 function EmptyState({ navigate }) {
+  const { t } = useTranslation();
+
   return (
     <div
       className="
@@ -291,15 +297,14 @@ function EmptyState({ navigate }) {
       </div>
 
       <h2 className="text-[17px] font-semibold text-[#182B3A]" dir="auto">
-        لا يوجد سجل طوارئ بعد
+        {t("emergency.history.emptyTitle")}
       </h2>
 
       <p
         className="mt-2 max-w-[380px] text-[14px] leading-6 text-[#64748B]"
         dir="auto"
       >
-        كل حالة طوارئ يتم تقييمها هتظهر هنا. لو حاسس بأعراض تستدعي القلق،
-        ابدأ تقييم طوارئ دلوقتي.
+        {t("emergency.history.emptyDescription")}
       </p>
 
       <button
@@ -322,7 +327,7 @@ function EmptyState({ navigate }) {
         dir="auto"
       >
         <ShieldAlert size={16} />
-        بدء تقييم طوارئ
+        {t("emergency.history.startAssessment")}
       </button>
 
     </div>
@@ -335,6 +340,7 @@ function EmptyState({ navigate }) {
 /* ========================================================= */
 
 function EventCard({ event }) {
+  const { t, i18n } = useTranslation();
   const condition = CONDITION_META[event.condition] || CONDITION_META.unknown;
   const risk = RISK_META[event.risk_level] || RISK_META.low;
   const status = STATUS_META[event.escalation_status] || STATUS_META.monitoring;
@@ -373,12 +379,15 @@ function EventCard({ event }) {
               className="text-[15px] font-semibold text-[#182B3A]"
               dir="auto"
             >
-              {condition.label}
+              {t(condition.translationKey)}
             </p>
 
             <div className="mt-1 flex items-center gap-1.5 text-[13px] text-[#64748B]">
               <Clock size={13} />
-              <span>{formatDateTime(event.started_at)}</span>
+              <span>
+                {formatDateTime(event.started_at, i18n.language) ||
+                  t("emergency.history.dateUnavailable")}
+              </span>
             </div>
 
           </div>
@@ -389,7 +398,7 @@ function EventCard({ event }) {
           className={`rounded-full px-3 py-1 text-[12px] font-semibold ${risk.bg} ${risk.text}`}
           dir="auto"
         >
-          {risk.label}
+          {t(risk.translationKey)}
         </span>
 
       </div>
@@ -401,7 +410,7 @@ function EventCard({ event }) {
           className={`rounded-md px-2.5 py-1.5 text-[12px] font-medium ${status.bg} ${status.text}`}
           dir="auto"
         >
-          {status.label}
+          {t(status.translationKey)}
         </span>
 
         {event.chat_session_id ? (
@@ -418,7 +427,7 @@ function EventCard({ event }) {
             "
             dir="auto"
           >
-            عرض المحادثة
+            {t("emergency.history.viewChat")}
             <ExternalLink size={13} />
           </Link>
         ) : null}

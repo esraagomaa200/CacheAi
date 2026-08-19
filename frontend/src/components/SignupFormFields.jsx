@@ -21,6 +21,7 @@ import {
 
 import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getApiErrorKey } from "../i18n/api-error";
 import {
   API_BASE_URL,
   formatApiError,
@@ -75,20 +76,6 @@ function InputShell({ icon: Icon, children }) {
 
 const inputBase =
   "w-full h-11 pl-10 pr-4 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder-gray-400 bg-white outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
-
-function getRegistrationErrorKey(error) {
-  const detail = error instanceof Error ? error.message.toLowerCase() : "";
-
-  if (/email\s+or\s+patient\s+id\s+already\s+exists/.test(detail)) {
-    return "errors.registrationConflict";
-  }
-
-  if (/email.*(?:duplicate|already exists|already registered|unique)/.test(detail)) {
-    return "errors.duplicateEmail";
-  }
-
-  return "errors.registrationFailure";
-}
 
 export default function SignupFormFields() {
   const { t } = useTranslation();
@@ -283,7 +270,7 @@ const handleSubmit = async (e) => {
     );
 
     setErrors({
-      submit: getRegistrationErrorKey(error),
+      submit: getApiErrorKey(error instanceof Error ? error.message : ""),
     });
   } finally {
     setSubmitting(false);
@@ -717,7 +704,7 @@ const handleSubmit = async (e) => {
 
         {errors.submit && (
   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-    {t(errors.submit)}
+    {t(errors.submit, { context: "registration" })}
   </div>
 )}
 

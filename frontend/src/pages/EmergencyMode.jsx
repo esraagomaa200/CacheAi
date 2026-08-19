@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   LuTriangleAlert,
@@ -7,9 +8,10 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
-import ThemeToggle from "../components/ThemeToggle";
+import AppearanceControls from "../components/AppearanceControls";
 
 function EmergencyMode() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -23,7 +25,7 @@ function EmergencyMode() {
 
           <img
             src={logo2}
-            alt="NajdaAI"
+            alt={t("auth.logoAlt")}
             className="h-10 w-10 object-contain"
           />
 
@@ -34,14 +36,14 @@ function EmergencyMode() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle compact />
+          <AppearanceControls compact />
 
           {/* Emergency Badge */}
           <div className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
 
             <LuTriangleAlert size={17} />
 
-            <span>Emergency Mode</span>
+            <span>{t("emergency.mode")}</span>
 
           </div>
         </div>
@@ -72,15 +74,13 @@ function EmergencyMode() {
 
           {/* Heading */}
           <h1 className="mt-7 text-4xl font-bold tracking-tight text-[#18323A]">
-            Emergency Assistance
+            {t("emergency.title")}
           </h1>
 
 
           {/* Description */}
           <p className="mx-auto mt-4 max-w-[520px] text-base leading-7 text-[#66787E]">
-            Tell us what's happening right now. NajdaAI will help
-            you understand your symptoms and guide you through
-            the next steps.
+            {t("emergency.description")}
           </p>
 
 
@@ -99,12 +99,11 @@ function EmergencyMode() {
             <div>
 
               <h2 className="text-sm font-bold text-[#8F3030]">
-                Important
+                {t("emergency.warningTitle")}
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-[#7B5555]">
-                If you are experiencing a life-threatening emergency,
-                contact your local emergency service immediately.
+                {t("emergency.warning")}
               </p>
 
             </div>
@@ -117,17 +116,17 @@ function EmergencyMode() {
 
             <NextStep
               number="1"
-              text="Describe your symptoms in the chat, by typing or voice."
+              text={t("emergency.steps.describe")}
             />
 
             <NextStep
               number="2"
-              text="If your symptoms look high-risk, a 60-second safety check starts."
+              text={t("emergency.steps.safetyCheck")}
             />
 
             <NextStep
               number="3"
-              text="No response in time notifies your registered emergency contact."
+              text={t("emergency.steps.notify")}
             />
 
           </div>
@@ -159,7 +158,7 @@ function EmergencyMode() {
             "
           >
 
-            Start Emergency Chat
+            {t("emergency.startChat")}
 
             <LuArrowRight
               size={19}
@@ -177,7 +176,7 @@ function EmergencyMode() {
               className="text-[#19A878]"
             />
 
-            <span>No account required</span>
+            <span>{t("emergency.authentication")}</span>
 
           </div>
 

@@ -16,9 +16,27 @@ import {
 
 import SidebarProfile from "../components/SidebarProfile";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { apiFetch, mapBackendProfileToForm } from "../lib/api";
+import { getApiErrorKey } from "../i18n/api-error";
+import { getFormattingLocale } from "../i18n/language";
+
+function formatProfileDate(value, language) {
+  if (!value) return "";
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat(getFormattingLocale(language), {
+    dateStyle: "medium",
+  }).format(date);
+}
 
 function Profile() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -29,7 +47,7 @@ function Profile() {
     const fetchProfile = async () => {
       try {
         if (!localStorage.getItem("accessToken")) {
-          setError("You are not logged in.");
+          setError("profile.unauthenticated");
           setLoading(false);
           return;
         }
@@ -47,9 +65,7 @@ function Profile() {
       } catch (err) {
         console.error("Failed to load profile:", err);
 
-        setError(
-          err.message || "Something went wrong."
-        );
+        setError(getApiErrorKey(err instanceof Error ? err.message : ""));
 
       } finally {
         setLoading(false);
@@ -92,7 +108,7 @@ function Profile() {
             </div>
 
             <p className="text-[15px] font-medium text-[#526572]">
-              Loading profile...
+              {t("profile.loading")}
             </p>
 
           </div>
@@ -134,7 +150,7 @@ function Profile() {
             </div>
 
             <p className="text-[15px] font-medium text-[#526572]">
-              {error || "No profile data found."}
+              {error ? t(error) : t("profile.noData")}
             </p>
 
             <button
@@ -151,7 +167,7 @@ function Profile() {
                 hover:bg-[#168F68]
               "
             >
-              Go to Login
+              {t("profile.goToLogin")}
             </button>
 
           </div>
@@ -168,6 +184,11 @@ function Profile() {
     : profile.chronicDiseases
       ? [profile.chronicDiseases]
       : [];
+
+  const formattedDateOfBirth = formatProfileDate(
+    profile.dateOfBirth,
+    i18n.language
+  );
 
 
   return (
@@ -191,11 +212,11 @@ function Profile() {
             <div>
 
               <h1 className="text-[27px] font-bold text-[#182B3A]">
-                My Profile
+                {t("profile.title")}
               </h1>
 
               <p className="mt-1 text-[16px] text-[#64748B]">
-                View and manage your personal and medical information.
+                {t("profile.description")}
               </p>
 
             </div>
@@ -224,7 +245,7 @@ function Profile() {
               "
             >
               <Pencil size={15} />
-              Edit Profile
+              {t("profile.editProfile")}
             </button>
 
           </div>
@@ -277,8 +298,11 @@ function Profile() {
 
                   <div className="flex flex-wrap items-center gap-2">
 
-                    <h2 className="text-[20px] font-bold text-[#182B3A]">
-                      {profile.fullName || "Patient"}
+                    <h2
+                      className="text-[20px] font-bold text-[#182B3A]"
+                      dir="auto"
+                    >
+                      {profile.fullName || t("profile.patient")}
                     </h2>
 
                     <span
@@ -292,7 +316,7 @@ function Profile() {
                         text-[#15966B]
                       "
                     >
-                      Patient
+                      {t("profile.patient")}
                     </span>
 
                   </div>
@@ -304,8 +328,8 @@ function Profile() {
 
                       <Mail size={15} />
 
-                      <span>
-                        {profile.email || "Not provided"}
+                      <span dir="auto">
+                        {profile.email || t("profile.emptyValue")}
                       </span>
 
                     </div>
@@ -316,8 +340,10 @@ function Profile() {
                       <CreditCard size={15} />
 
                       <span>
-                        Patient ID:{" "}
-                        {profile.patientId || "Not provided"}
+                        {t("profile.fields.patientId")}: {" "}
+                        <span dir="auto">
+                          {profile.patientId || t("profile.emptyValue")}
+                        </span>
                       </span>
 
                     </div>
@@ -359,11 +385,14 @@ function Profile() {
                   <div>
 
                     <p className="text-[13px] text-[#64748B]">
-                      Blood Type
+                      {t("profile.fields.bloodType")}
                     </p>
 
-                    <p className="mt-0.5 text-[17px] font-semibold text-[#182B3A]">
-                      {profile.bloodType || "—"}
+                    <p
+                      className="mt-0.5 text-[17px] font-semibold text-[#182B3A]"
+                      dir="auto"
+                    >
+                      {profile.bloodType || t("profile.emptyValue")}
                     </p>
 
                   </div>
@@ -397,7 +426,7 @@ function Profile() {
                   <div>
 
                     <p className="text-[13px] text-[#64748B]">
-                      Conditions
+                      {t("profile.conditions")}
                     </p>
 
                     <p className="mt-0.5 text-[17px] font-semibold text-[#182B3A]">
@@ -433,33 +462,33 @@ function Profile() {
 
               <SectionHeader
                 icon={<User size={17} />}
-                title="Personal Information"
+                title={t("profile.sections.personal")}
               />
 
               <div className="px-5">
 
                 <InfoRow
-                  label="Full Name"
+                  label={t("profile.fields.fullName")}
                   value={profile.fullName}
                 />
 
                 <InfoRow
-                  label="Patient ID"
+                  label={t("profile.fields.patientId")}
                   value={profile.patientId}
                 />
 
                 <InfoRow
-                  label="Email Address"
+                  label={t("profile.fields.email")}
                   value={profile.email}
                 />
 
                 <InfoRow
-                  label="Date of Birth"
-                  value={profile.dateOfBirth}
+                  label={t("profile.fields.dateOfBirth")}
+                  value={formattedDateOfBirth}
                 />
 
                 <InfoRow
-                  label="Gender"
+                  label={t("profile.fields.gender")}
                   value={profile.gender}
                   last
                 />
@@ -483,13 +512,13 @@ function Profile() {
 
               <SectionHeader
                 icon={<HeartPulse size={17} />}
-                title="Medical Information"
+                title={t("profile.sections.medical")}
               />
 
               <div className="px-5">
 
                 <InfoRow
-                  label="Blood Type"
+                  label={t("profile.fields.bloodType")}
                   value={profile.bloodType}
                 />
 
@@ -497,7 +526,7 @@ function Profile() {
                 <div className="flex min-h-[78px] items-start border-b border-[#EDF1F0] py-4">
 
                   <span className="w-[155px] shrink-0 text-[13px] text-[#64748B]">
-                    Chronic Conditions
+                    {t("profile.fields.chronicConditions")}
                   </span>
 
                   <div className="flex flex-wrap gap-2">
@@ -516,7 +545,7 @@ function Profile() {
                     ) : (
 
                       <span className="text-[13px] text-gray-400">
-                        None
+                        {t("profile.none")}
                       </span>
 
                     )}
@@ -526,8 +555,8 @@ function Profile() {
                 </div>
 
                 <InfoRow
-                  label="Date of Birth"
-                  value={profile.dateOfBirth}
+                  label={t("profile.fields.dateOfBirth")}
+                  value={formattedDateOfBirth}
                   last
                 />
 
@@ -553,7 +582,7 @@ function Profile() {
 
             <SectionHeader
               icon={<Phone size={17} />}
-              title="Emergency Contact"
+              title={t("profile.sections.emergency")}
             />
 
             <div className="flex flex-col px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -561,17 +590,17 @@ function Profile() {
               <div className="w-full lg:w-[55%]">
 
                 <InfoRow
-                  label="Contact Name"
+                  label={t("profile.fields.contactName")}
                   value={profile.emergencyName}
                 />
 
                 <InfoRow
-                  label="Phone Number"
+                  label={t("profile.fields.phoneNumber")}
                   value={profile.emergencyPhone}
                 />
 
                 <InfoRow
-                  label="Email Address"
+                  label={t("profile.fields.email")}
                   value={profile.emergencyEmail}
                   last
                 />
@@ -604,8 +633,7 @@ function Profile() {
                 />
 
                 <p className="text-[13px] leading-5 text-[#526572]">
-                  This information helps us provide better
-                  and faster assistance in case of emergency.
+                  {t("profile.emergencyNote")}
                 </p>
 
               </div>
@@ -655,12 +683,11 @@ function Profile() {
               <div>
 
                 <p className="text-[13px] font-semibold text-[#263746]">
-                  Your data is secure
+                  {t("profile.securityTitle")}
                 </p>
 
                 <p className="mt-0.5 text-[11px] leading-4 text-[#71808A]">
-                  We use advanced encryption to protect your
-                  personal and medical information.
+                  {t("profile.securityDescription")}
                 </p>
 
               </div>
@@ -737,6 +764,8 @@ function InfoRow({
   value,
   last = false,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div
       className={`
@@ -754,8 +783,11 @@ function InfoRow({
         {label}
       </span>
 
-      <span className="break-words text-[14px] font-medium text-[#263746]">
-        {value || "Not provided"}
+      <span
+        className="break-words text-[14px] font-medium text-[#263746]"
+        dir="auto"
+      >
+        {value || t("profile.emptyValue")}
       </span>
 
     </div>
@@ -792,6 +824,7 @@ function DiseaseTag({ disease }) {
 
   return (
     <span
+      dir="auto"
       className="
         inline-flex
         items-center

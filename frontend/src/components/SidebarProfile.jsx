@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { clearAccessToken } from "../lib/api";
 
@@ -13,33 +14,23 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
-import ThemeToggle from "./ThemeToggle";
+import AppearanceControls from "./AppearanceControls";
+
+const NAV_ITEMS = [
+  { id: "home", translationKey: "navigation.home", path: "/", icon: LuHouse },
+  { id: "chat", translationKey: "navigation.chat", path: "/chat", icon: LuMessageSquare },
+  { id: "profile", translationKey: "navigation.profile", path: "/profile", icon: LuUserRound },
+  {
+    id: "emergency-history",
+    translationKey: "navigation.emergencyHistory",
+    path: "/emergency-history",
+    icon: LuHistory,
+  },
+];
 
 function SidebarProfile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-
-  const navItems = [
-    {
-      name: "Home",
-      path: "/",
-      icon: LuHouse,
-    },
-    {
-      name: "Chat",
-      path: "/chat",
-      icon: LuMessageSquare,
-    },
-    {
-      name: "Profile",
-      path: "/profile",
-      icon: LuUserRound,
-    },
-    {
-      name: "Emergency History",
-      path: "/emergency-history",
-      icon: LuHistory,
-    },
-  ];
 
   return (
     <aside className="flex min-h-screen w-[255px] shrink-0 flex-col border-r border-[#E8EEEC] bg-white px-3 py-5">
@@ -49,7 +40,7 @@ function SidebarProfile() {
 
         <img
           src={logo2}
-          alt="NajdaAI"
+          alt={t("auth.logoAlt")}
           className="h-9 w-9 object-contain"
         />
 
@@ -59,18 +50,18 @@ function SidebarProfile() {
 
       </div>
 
-      <ThemeToggle className="mt-6 w-full" />
+      <AppearanceControls className="mt-6 w-full" />
 
 
       {/* Navigation */}
       <nav className="mt-5 flex flex-col gap-1.5">
 
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
 
           return (
             <NavLink
-              key={item.name}
+              key={item.id}
               to={item.path}
               className={({ isActive }) => `
                 group
@@ -106,7 +97,7 @@ function SidebarProfile() {
                   />
 
                   <span>
-                    {item.name}
+                    {t(item.translationKey)}
                   </span>
                 </>
               )}
@@ -152,7 +143,7 @@ function SidebarProfile() {
     />
 
     <span>
-      Logout
+      {t("navigation.logout")}
     </span>
 
   </button>
@@ -193,11 +184,11 @@ function SidebarProfile() {
     {/* Text */}
     <div className="min-w-0 flex-1">
       <p className="text-[12px] font-bold text-[#C43D3D]">
-        Emergency Mode
+        {t("navigation.emergencyMode")}
       </p>
 
       <p className="mt-0.5 text-[10px] text-[#8C6A6A]">
-        Get immediate assistance
+        {t("navigation.immediateAssistance")}
       </p>
     </div>
 

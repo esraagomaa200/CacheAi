@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import SidebarProfile from "../components/SidebarProfile";
 import {
@@ -25,6 +26,7 @@ import {
   mapBackendProfileToForm,
   profileFormToBackendPayload,
 } from "../lib/api";
+import { getApiErrorKey } from "../i18n/api-error";
 
 
 /* ========================================================= */
@@ -34,27 +36,27 @@ import {
 const CHRONIC_DISEASES = [
   {
     id: "Diabetes",
-    label: "Diabetes",
+    translationKey: "profile.diseases.diabetes",
     icon: Activity,
   },
   {
     id: "Hypertension",
-    label: "Hypertension",
+    translationKey: "profile.diseases.hypertension",
     icon: Heart,
   },
   {
     id: "Asthma",
-    label: "Asthma",
+    translationKey: "profile.diseases.asthma",
     icon: Wind,
   },
   {
     id: "Heart Disease",
-    label: "Heart Disease",
+    translationKey: "profile.diseases.heartDisease",
     icon: HeartPulse,
   },
   {
     id: "Kidney Disease",
-    label: "Kidney Disease",
+    translationKey: "profile.diseases.kidneyDisease",
     icon: Activity,
   },
 ];
@@ -189,6 +191,7 @@ function InputShell({ icon: Icon, children }) {
 
 function EditProfile() {
 
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
 
@@ -325,7 +328,9 @@ function EditProfile() {
       navigate("/profile");
     } catch (submitError) {
       console.error("Failed to update profile:", submitError);
-      setError(submitError.message || "Failed to update profile.");
+      setError(
+        getApiErrorKey(submitError instanceof Error ? submitError.message : "")
+      );
     } finally {
       setSaving(false);
     }
@@ -389,7 +394,7 @@ function EditProfile() {
                   text-[#182B3A]
                 "
               >
-                Edit Profile
+                {t("profile.editProfile")}
               </h1>
 
               <p
@@ -399,8 +404,7 @@ function EditProfile() {
                   text-[#64748B]
                 "
               >
-                Update your personal and medical
-                information.
+                {t("profile.editDescription")}
               </p>
 
             </div>
@@ -434,7 +438,7 @@ function EditProfile() {
 
               <ArrowLeft size={16} />
 
-              Back to Profile
+              {t("profile.backToProfile")}
 
             </button>
 
@@ -450,7 +454,7 @@ function EditProfile() {
           >
             {error && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {error}
+                {t(error)}
               </div>
             )}
 
@@ -472,7 +476,7 @@ function EditProfile() {
 
               <SectionHeader
                 icon={User}
-                title="Personal Information"
+                title={t("profile.sections.personal")}
               />
 
 
@@ -490,14 +494,15 @@ function EditProfile() {
 
                   {/* Full Name */}
 
-                  <Field label="Full Name">
+                  <Field label={t("profile.fields.fullName")}>
 
                     <InputShell icon={User}>
 
                       <input
                         type="text"
+                        dir="auto"
                         className={inputBase}
-                        placeholder="Enter your full name"
+                        placeholder={t("profile.placeholders.fullName")}
                         value={
                           formData.fullName
                         }
@@ -516,7 +521,7 @@ function EditProfile() {
 
                   {/* Patient ID */}
 
-                  <Field label="Patient ID">
+                  <Field label={t("profile.fields.patientId")}>
 
                     <InputShell
                       icon={CreditCard}
@@ -524,8 +529,9 @@ function EditProfile() {
 
                       <input
                         type="text"
+                        dir="auto"
                         className={inputBase}
-                        placeholder="Enter your ID"
+                        placeholder={t("profile.placeholders.patientId")}
                         value={
                           formData.patientId
                         }
@@ -544,14 +550,15 @@ function EditProfile() {
 
                   {/* Email */}
 
-                  <Field label="Email Address">
+                  <Field label={t("profile.fields.email")}>
 
                     <InputShell icon={Mail}>
 
                       <input
                         type="email"
+                        dir="auto"
                         className={inputBase}
-                        placeholder="Enter your email"
+                        placeholder={t("profile.placeholders.email")}
                         value={
                           formData.email
                         }
@@ -570,7 +577,7 @@ function EditProfile() {
 
                   {/* Date of Birth */}
 
-                  <Field label="Date of Birth">
+                  <Field label={t("profile.fields.dateOfBirth")}>
 
                     <InputShell
                       icon={CalendarDays}
@@ -597,7 +604,7 @@ function EditProfile() {
 
                   {/* Gender */}
 
-                  <Field label="Gender">
+                  <Field label={t("profile.fields.gender")}>
 
                     <InputShell icon={User}>
 
@@ -615,19 +622,19 @@ function EditProfile() {
                       >
 
                         <option value="">
-                          Select your gender
+                          {t("profile.placeholders.gender")}
                         </option>
 
                         <option value="Male">
-                          Male
+                          {t("profile.gender.male")}
                         </option>
 
                         <option value="Female">
-                          Female
+                          {t("profile.gender.female")}
                         </option>
 
                         <option value="Prefer not to say">
-                          Prefer not to say
+                          {t("profile.gender.preferNotToSay")}
                         </option>
 
                       </select>
@@ -661,7 +668,7 @@ function EditProfile() {
 
               <SectionHeader
                 icon={HeartPulse}
-                title="Medical Information"
+                title={t("profile.sections.medical")}
               />
 
 
@@ -672,7 +679,7 @@ function EditProfile() {
 
                 <div className="mb-6">
 
-                  <Field label="Blood Type">
+                  <Field label={t("profile.fields.bloodType")}>
 
                     <InputShell
                       icon={Droplet}
@@ -692,7 +699,7 @@ function EditProfile() {
                       >
 
                         <option value="">
-                          Select your blood type
+                          {t("profile.placeholders.bloodType")}
                         </option>
 
                         {BLOOD_TYPES.map(
@@ -730,7 +737,7 @@ function EditProfile() {
                         text-[#526572]
                       "
                     >
-                      Chronic Diseases
+                      {t("profile.fields.chronicDiseases")}
                     </label>
 
                     <p
@@ -740,7 +747,7 @@ function EditProfile() {
                         text-[#8A989D]
                       "
                     >
-                      Select all that apply.
+                      {t("profile.selectAll")}
                     </p>
 
                   </div>
@@ -758,7 +765,7 @@ function EditProfile() {
                     {CHRONIC_DISEASES.map(
                       ({
                         id,
-                        label,
+                        translationKey,
                         icon: Icon,
                       }) => {
 
@@ -806,7 +813,7 @@ function EditProfile() {
                             />
 
                             <span className="truncate">
-                              {label}
+                              {t(translationKey)}
                             </span>
 
                           </button>
@@ -823,7 +830,7 @@ function EditProfile() {
 
                   <div className="mt-5">
 
-                    <Field label="Other Condition">
+                    <Field label={t("profile.fields.otherCondition")}>
 
                       <InputShell
                         icon={MoreHorizontal}
@@ -831,8 +838,9 @@ function EditProfile() {
 
                         <input
                           type="text"
+                          dir="auto"
                           className={inputBase}
-                          placeholder="Enter any other condition"
+                          placeholder={t("profile.placeholders.otherCondition")}
                           value={
                             formData.otherCondition
                           }
@@ -874,7 +882,7 @@ function EditProfile() {
 
               <SectionHeader
                 icon={Phone}
-                title="Emergency Contact"
+                title={t("profile.sections.emergency")}
               />
 
 
@@ -892,14 +900,15 @@ function EditProfile() {
 
                   {/* Contact Name */}
 
-                  <Field label="Contact Name">
+                  <Field label={t("profile.fields.contactName")}>
 
                     <InputShell icon={User}>
 
                       <input
                         type="text"
+                        dir="auto"
                         className={inputBase}
-                        placeholder="Enter contact name"
+                        placeholder={t("profile.placeholders.contactName")}
                         value={
                           formData.emergencyName
                         }
@@ -918,7 +927,7 @@ function EditProfile() {
 
                   {/* Phone */}
 
-                  <Field label="Phone Number">
+                  <Field label={t("profile.fields.phoneNumber")}>
 
                     <InputShell
                       icon={Smartphone}
@@ -926,8 +935,9 @@ function EditProfile() {
 
                       <input
                         type="tel"
+                        dir="auto"
                         className={inputBase}
-                        placeholder="Enter phone number"
+                        placeholder={t("profile.placeholders.phoneNumber")}
                         value={
                           formData.emergencyPhone
                         }
@@ -948,14 +958,15 @@ function EditProfile() {
 
                   <div className="md:col-span-2">
 
-                    <Field label="Email Address">
+                    <Field label={t("profile.fields.email")}>
 
                       <InputShell icon={Mail}>
 
                         <input
                           type="email"
+                          dir="auto"
                           className={inputBase}
-                          placeholder="Enter email address"
+                          placeholder={t("profile.placeholders.emergencyEmail")}
                           value={
                             formData.emergencyEmail
                           }
@@ -1009,9 +1020,7 @@ function EditProfile() {
                       text-[#526572]
                     "
                   >
-                    Keeping your emergency contact
-                    information updated helps us provide
-                    faster assistance when needed.
+                    {t("profile.editEmergencyNote")}
                   </p>
 
                 </div>
@@ -1056,7 +1065,7 @@ function EditProfile() {
                   hover:bg-[#F5FBF9]
                 "
               >
-                Cancel
+                {t("profile.cancel")}
               </button>
 
 
@@ -1085,7 +1094,7 @@ function EditProfile() {
 
                 <Check size={17} />
 
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? t("profile.saving") : t("profile.saveChanges")}
 
               </button>
 

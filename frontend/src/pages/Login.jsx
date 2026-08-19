@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, HeartPulse } from "lucide-react";
 
 import logo2 from "../assets/icons/Logo2.png";
 import AppearanceControls from "../components/AppearanceControls";
+import { getApiErrorKey } from "../i18n/api-error";
 import {
   API_BASE_URL,
   apiFetch,
@@ -20,14 +21,6 @@ const GOOGLE_CLIENT_ID =
 
 const inputBase =
   "w-full h-11 pl-10 pr-4 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder-gray-400 bg-white outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
-
-function getLoginErrorKey(error) {
-  const detail = error instanceof Error ? error.message.toLowerCase() : "";
-
-  return /incorrect|invalid|credential|unauthorized/.test(detail)
-    ? "errors.invalidCredentials"
-    : "errors.genericFailure";
-}
 
 export default function Login() {
   const { t } = useTranslation();
@@ -68,7 +61,7 @@ export default function Login() {
       navigate("/profile");
     } catch (err) {
       console.error("Login error:", err);
-      setError(getLoginErrorKey(err));
+      setError(getApiErrorKey(err instanceof Error ? err.message : ""));
     } finally {
       setLoading(false);
     }

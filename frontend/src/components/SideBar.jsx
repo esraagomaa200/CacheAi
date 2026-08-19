@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   LuPlus,
@@ -10,9 +11,10 @@ import {
 
 import logo2 from "../assets/icons/Logo2.png";
 import { clearAccessToken, getAccessToken, listSessions } from "../lib/api";
-import ThemeToggle from "./ThemeToggle";
+import AppearanceControls from "./AppearanceControls";
 
 function SideBar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,7 +50,8 @@ function SideBar() {
         if (!cancelled) {
           setSessions(data?.sessions || []);
         }
-      } catch {
+      } catch (error) {
+        console.error("Failed to load chat sessions:", error);
         if (!cancelled) {
           setSessions([]);
         }
@@ -73,7 +76,7 @@ function SideBar() {
       <div className="mb-8 flex items-center gap-2 px-3">
         <img
           src={logo2}
-          alt="CacheAI"
+          alt={t("auth.logoAlt")}
           className="h-8 w-8 object-contain"
         />
 
@@ -82,7 +85,7 @@ function SideBar() {
         </span>
       </div>
 
-      <ThemeToggle className="mb-5 w-full" />
+      <AppearanceControls className="mb-5 w-full" />
 
       {/* New Chat */}
       <button
@@ -111,27 +114,27 @@ function SideBar() {
           className="text-[#167E68]"
         />
 
-        <span>New Chat</span>
+        <span>{t("navigation.newChat")}</span>
       </button>
 
       {/* Navigation */}
       <nav className="flex flex-col gap-1">
 
         <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[#8FA0A5]">
-          Chat History
+          {t("navigation.chatHistory")}
         </div>
 
         <div className="flex max-h-[220px] flex-col gap-1 overflow-y-auto pr-1">
 
           {loadingSessions && (
             <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
-              Loading...
+              {t("navigation.loading")}
             </p>
           )}
 
           {!loadingSessions && sessions.length === 0 && (
             <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
-              No chats yet
+              {t("navigation.emptyHistory")}
             </p>
           )}
 
@@ -164,8 +167,8 @@ function SideBar() {
                 className="shrink-0"
               />
 
-              <span className="truncate">
-                {session.title || "New Chat"}
+              <span className="truncate" dir="auto">
+                {session.title || t("navigation.newChat")}
               </span>
             </button>
           ))}
@@ -174,7 +177,7 @@ function SideBar() {
 
         <SidebarItem
           icon={<LuUserRound />}
-          label="Profile"
+          label={t("navigation.profile")}
           onClick={() => navigate("/profile")}
         />
 
@@ -211,7 +214,7 @@ function SideBar() {
             strokeWidth={1.7}
           />
 
-          <span>Logout</span>
+          <span>{t("navigation.logout")}</span>
         </button>
 
         {/* Emergency Card */}
@@ -227,12 +230,11 @@ function SideBar() {
           "
         >
           <h3 className="text-[13px] font-bold text-[#162D35]">
-            Need urgent help?
+            {t("navigation.urgentHelp")}
           </h3>
 
           <p className="mt-3 text-[11px] leading-[1.7] text-[#5B6B71]">
-            If you are experiencing a medical emergency, please call your
-            local emergency number.
+            {t("navigation.urgentHelpInstructions")}
           </p>
         </div>
 

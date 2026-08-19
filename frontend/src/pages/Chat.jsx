@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   LuEllipsis,
@@ -20,12 +21,14 @@ import {
   respondEvent,
   escalateEvent,
 } from "../lib/api";
+import { getApiErrorKey } from "../i18n/api-error";
+import { getFormattingLocale } from "../i18n/language";
 
 const RISK_LABELS = {
-  low: "منخفض",
-  moderate: "متوسط",
-  high: "مرتفع",
-  emergency: "طارئ",
+  low: "chat.risk.low",
+  moderate: "chat.risk.moderate",
+  high: "chat.risk.high",
+  emergency: "chat.risk.emergency",
 };
 
 const SpeechRecognitionCtor =
@@ -33,13 +36,13 @@ const SpeechRecognitionCtor =
     ? window.SpeechRecognition || window.webkitSpeechRecognition
     : null;
 
-function formatTime(dateString) {
+function formatTime(dateString, language) {
   const date = dateString ? new Date(dateString) : new Date();
 
-  return date.toLocaleTimeString("ar-EG", {
+  return new Intl.DateTimeFormat(getFormattingLocale(language), {
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(date);
 }
 
 function riskBadgeClass(level) {
@@ -55,6 +58,7 @@ function riskBadgeClass(level) {
 }
 
 function Chat() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -128,8 +132,9 @@ function Chat() {
           setMessages(data?.messages || []);
         }
       } catch (err) {
+        console.error("Failed to load chat messages:", err);
         if (!cancelled) {
-          setError(err.message || "تعذر تحميل الرسائل.");
+          setError(getApiErrorKey(err instanceof Error ? err.message : ""));
         }
       } finally {
         if (!cancelled) {
@@ -159,7 +164,8 @@ function Chat() {
           { replace: true }
         );
       } catch (err) {
-        setError(err.message || "تعذر بدء وضع الطوارئ.");
+        console.error("Failed to start emergency chat:", err);
+        setError(getApiErrorKey(err instanceof Error ? err.message : ""));
       } finally {
         setInitializing(false);
       }
@@ -236,6 +242,7 @@ function Chat() {
       setContact(data?.emergency_contact || null);
       setCountdown(null);
     } catch (err) {
+      console.error("Failed to escalate emergency event:", err);
       const message = err.message || "";
       if (message.includes("already")) {
         // 409: the event reached a terminal state elsewhere (another tab,
@@ -245,7 +252,7 @@ function Chat() {
       } else {
         // Escalation is safety-critical: keep the event alert_pending and
         // auto-retry in 5s instead of silently freezing the countdown.
-        setError(message || "تعذر تصعيد حالة الطوارئ — بنحاول تاني.");
+        setError(getApiErrorKey(message));
         setCountdown(5);
       }
     } finally {
@@ -283,7 +290,8 @@ function Chat() {
       setEmergencyEvent(data);
       setCountdown(null);
     } catch (err) {
-      setError(err.message || "تعذر تسجيل استجابتك.");
+      console.error("Failed to record emergency response:", err);
+      setError(getApiErrorKey(err instanceof Error ? err.message : ""));
     } finally {
       setEscalating(false);
     }
@@ -355,7 +363,8 @@ function Chat() {
       // request — nudge the sidebar to refetch, or it shows "New Chat" forever.
       window.dispatchEvent(new Event("najda:sessions-refresh"));
     } catch (err) {
-      setError(err.message || "تعذر إرسال الرسالة.");
+      console.error("Failed to send chat message:", err);
+      setError(getApiErrorKey(err instanceof Error ? err.message : ""));
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInput(content);
     } finally {
@@ -451,7 +460,7 @@ function Chat() {
         {isEmergencyMode && (
           <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-red-100 bg-red-50 px-7 py-2.5">
             <span className="text-[13px] font-bold text-red-700">
-              🚨 وضع الطوارئ
+              🚨 {t("chat.emergencyMode")}
             </span>
 
             {emergencyEvent?.risk_level && (
@@ -460,8 +469,9 @@ function Chat() {
                   emergencyEvent.risk_level
                 )}`}
               >
-                {RISK_LABELS[emergencyEvent.risk_level] ||
-                  emergencyEvent.risk_level}
+                {RISK_LABELS[emergencyEvent.risk_level]
+                  ? t(RISK_LABELS[emergencyEvent.risk_level])
+                  : emergencyEvent.risk_level}
               </span>
             )}
           </div>
@@ -469,10 +479,17 @@ function Chat() {
 
         <header className="flex h-[72px] items-center justify-between border-b border-gray-100 px-7">
           <h1 className="text-[15px] font-bold text-[#172B34]">
-            {isEmergencyMode ? "محادثة الطوارئ" : sessionId ? "Chat" : "New Chat"}
+            {isEmergencyMode
+              ? t("chat.emergencyTitle")
+              : sessionId
+                ? t("chat.title")
+                : t("chat.newTitle")}
           </h1>
 
-          <button className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50">
+          <button
+            className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50"
+            aria-label={t("chat.moreOptions")}
+          >
             <LuEllipsis size={22} />
           </button>
         </header>
@@ -482,10 +499,15 @@ function Chat() {
           emergencyEvent?.escalation_status === "alert_pending" && (
             <div className="mx-5 mt-4 flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-center">
               <p className="text-[14px] font-semibold text-red-700">
-                هل أنت بخير؟ هنبلغ جهة الطوارئ خلال
+                {t("chat.safetyPrompt")}
               </p>
 
-              <span className="text-3xl font-bold text-red-600">
+              <span
+                className="text-3xl font-bold text-red-600"
+                aria-label={t("chat.countdown", {
+                  count: countdown ?? emergencyEvent.timer_seconds ?? 60,
+                })}
+              >
                 {countdown ?? emergencyEvent.timer_seconds ?? 60}
               </span>
 
@@ -494,19 +516,26 @@ function Chat() {
                 disabled={escalating}
                 className="rounded-full bg-[#1AA681] px-8 py-3 text-[14px] font-bold text-white transition hover:bg-[#148E70] disabled:opacity-60"
               >
-                أنا بخير ✅
+                {t("chat.imOkay")}
               </button>
             </div>
           )}
 
         {isEmergencyMode && emergencyEvent?.escalation_status === "escalated" && (
           <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-6 py-4">
-            <span className="text-2xl">📞</span>
+            <span className="text-2xl" aria-hidden="true">📞</span>
 
             <p className="text-[13px] font-medium text-red-700">
-              {contact
-                ? `جاري إبلاغ ${contact.name} — ${contact.phone}`
-                : "جاري محاولة إبلاغ جهة الطوارئ، لا توجد بيانات تواصل مسجلة."}
+              {contact ? (
+                <>
+                  {t("chat.notifyingContact")} {" "}
+                  <span dir="auto">{contact.name}</span>
+                  {" — "}
+                  <span dir="auto">{contact.phone}</span>
+                </>
+              ) : (
+                t("chat.notifyingNoContact")
+              )}
             </p>
           </div>
         )}
@@ -516,13 +545,13 @@ function Chat() {
           <div className="mx-auto flex max-w-[850px] flex-col gap-5">
             {initializing && (
               <p className="text-center text-[13px] text-[#8FA0A5]">
-                جاري تحميل المحادثة...
+                {t("chat.loading")}
               </p>
             )}
 
             {!initializing && messages.length === 0 && (
               <p className="text-center text-[13px] text-[#8FA0A5]">
-                ابدأ المحادثة الآن — اسأل عن أي أعراض أو استفسار طبي.
+                {t("chat.empty")}
               </p>
             )}
 
@@ -542,7 +571,7 @@ function Chat() {
 
                       <div className="mt-1.5 flex items-center justify-end gap-1">
                         <span className="text-[10px] text-[#6D8181]">
-                          {formatTime(msg.created_at)}
+                          {formatTime(msg.created_at, i18n.language)}
                         </span>
 
                         <LuCheckCheck size={14} className="text-[#1AA681]" />
@@ -557,7 +586,7 @@ function Chat() {
                   <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E7F8F3]">
                     <img
                       src={logo2}
-                      alt="CacheAI"
+                      alt={t("chat.assistantLogoAlt")}
                       className="h-7 w-7 object-contain"
                     />
                   </div>
@@ -572,7 +601,7 @@ function Chat() {
                       </p>
 
                       <div className="mt-3 text-left text-[10px] text-[#718187]">
-                        {formatTime(msg.created_at)}
+                        {formatTime(msg.created_at, i18n.language)}
                       </div>
                     </div>
 
@@ -587,14 +616,16 @@ function Chat() {
                               rel="noopener noreferrer"
                               className="rounded-full border border-gray-100 bg-[#F5FAF9] px-3 py-1 text-[11px] text-[#40545B] transition hover:border-[#A9DFD0] hover:bg-[#F2FBF8]"
                             >
-                              📚 {src.org} — {src.title}
+                              <span className="sr-only">{t("chat.source")}: </span>
+                              <span dir="auto">📚 {src.org} — {src.title}</span>
                             </a>
                           ) : (
                             <span
                               key={`${msg.id}-src-${i}`}
                               className="rounded-full border border-gray-100 bg-[#F5FAF9] px-3 py-1 text-[11px] text-[#40545B]"
                             >
-                              📚 {src.org} — {src.title}
+                              <span className="sr-only">{t("chat.source")}: </span>
+                              <span dir="auto">📚 {src.org} — {src.title}</span>
                             </span>
                           )
                         )}
@@ -610,7 +641,7 @@ function Chat() {
                 <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E7F8F3]">
                   <img
                     src={logo2}
-                    alt="CacheAI"
+                    alt={t("chat.assistantLogoAlt")}
                     className="h-7 w-7 object-contain"
                   />
                 </div>
@@ -629,7 +660,7 @@ function Chat() {
 
         {error && (
           <div className="mx-auto w-full max-w-[850px] px-5 pb-1 text-[12px] text-red-600">
-            {error}
+            {t(error)}
           </div>
         )}
 
@@ -637,8 +668,11 @@ function Chat() {
           <div className="mx-auto mb-1 flex w-full max-w-[850px] items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-[13px] font-medium text-red-700">
             <LuTriangleAlert size={18} className="shrink-0" />
             <span>
-              مستوى الخطورة {RISK_LABELS[lastAssistantRisk] || lastAssistantRisk}{" "}
-              — لو الأعراض شديدة، اتصل بالإسعاف 123 فورًا.
+              {t("chat.riskWarning", {
+                level: RISK_LABELS[lastAssistantRisk]
+                  ? t(RISK_LABELS[lastAssistantRisk])
+                  : lastAssistantRisk,
+              })}
             </span>
           </div>
         )}
@@ -653,7 +687,7 @@ function Chat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="اكتب رسالتك..."
+                placeholder={t("chat.messagePlaceholder")}
                 className="flex-1 bg-transparent px-1 py-2 text-[13px] text-[#243A42] outline-none placeholder:text-[#89979C]"
               />
 
@@ -661,7 +695,8 @@ function Chat() {
                 <button
                   type="button"
                   onClick={toggleListening}
-                  title="التحدث بالصوت"
+                  title={listening ? t("chat.stopVoice") : t("chat.startVoice")}
+                  aria-label={listening ? t("chat.stopVoice") : t("chat.startVoice")}
                   className={`
                     flex
                     h-8
@@ -687,6 +722,7 @@ function Chat() {
                 type="button"
                 onClick={handleSend}
                 disabled={sending || initializing || !input.trim()}
+                aria-label={t("chat.sendMessage")}
                 className="
                   flex
                   h-8

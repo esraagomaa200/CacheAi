@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { registerUser, seedAuth } from "./helpers.js";
 
 test.describe("Arabic browser language", () => {
   test.use({ locale: "ar-EG" });
@@ -155,4 +156,29 @@ test("persists a manually selected language", async ({ page }) => {
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+});
+
+test("translates authenticated page families while preserving dynamic content", async ({
+  page,
+  request,
+}) => {
+  const user = await registerUser(request, { name: "Mixed Demo User" });
+  await seedAuth(page, user.token);
+  await page.addInitScript(() =>
+    localStorage.setItem("najda-language", "ar")
+  );
+
+  await page.goto("/profile");
+  await expect(
+    page.getByRole("heading", { name: "ملفي الشخصي" })
+  ).toBeVisible();
+  await expect(page.getByText("Mixed Demo User").first()).toBeVisible();
+
+  await page.goto("/chat");
+  await expect(page.getByPlaceholder("اكتب رسالتك...")).toBeVisible();
+
+  await page.goto("/emergency");
+  await expect(
+    page.getByRole("heading", { name: "مساعدة الطوارئ" })
+  ).toBeVisible();
 });
