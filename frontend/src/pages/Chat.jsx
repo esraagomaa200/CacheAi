@@ -14,6 +14,8 @@ import {
 import logo2 from "../assets/icons/Logo2.png";
 import LiveCall from "../components/LiveCall";
 import SideBar from "../components/SideBar";
+import ProfileReminderBanner from "../components/ProfileReminderBanner";
+import useEmergencyContactGate from "../hooks/useEmergencyContactGate";
 import {
   getAccessToken,
   createSession,
@@ -72,6 +74,9 @@ function Chat() {
   const mode = searchParams.get("mode");
   const isEmergencyMode = mode === "emergency";
 
+  // Profile-completion gate: never blocks the emergency flow itself.
+  useEmergencyContactGate({ skip: isEmergencyMode });
+
   const [sessionId, setSessionId] = useState(
     sessionParam ? Number(sessionParam) : null
   );
@@ -99,6 +104,10 @@ function Chat() {
   // Auto-send after a natural pause instead of the browser cutting the mic
   // mid-thought: each new result resets this timer.
   const silenceTimerRef = useRef(null);
+  // Emergency siren: a Web-Audio sweep + vibration that must be impossible
+  // to miss while the "are you OK?" countdown is pending.
+  const sirenRef = useRef(null);
+  const vibrateIntervalRef = useRef(null);
   const bottomRef = useRef(null);
   const emergencyInitDone = useRef(false);
   // Session ids created by our own send flow: the load effect must not refetch
@@ -243,6 +252,83 @@ function Chat() {
     syncCountdown();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emergencyEvent?.escalation_status, emergencyEvent?.id]);
+
+  /* ================================================= */
+  /* EMERGENCY SIREN + VIBRATION */
+  /* ================================================= */
+
+  function startSiren() {
+    if (sirenRef.current) {
+      return;
+    }
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      // Ambulance-style sweep: an LFO swings the tone ±280Hz around 880Hz.
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+
+      osc.type = "triangle";
+      osc.frequency.value = 880;
+      lfo.type = "sine";
+      lfo.frequency.value = 0.9;
+      lfoGain.gain.value = 280;
+      gain.gain.value = 0.16;
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      lfo.start();
+      ctx.resume?.();
+
+      sirenRef.current = { ctx, osc, lfo };
+    } catch {
+      sirenRef.current = null;
+    }
+
+    if (navigator.vibrate) {
+      const pattern = [400, 180, 400, 180, 500];
+      navigator.vibrate(pattern);
+      vibrateIntervalRef.current = setInterval(
+        () => navigator.vibrate(pattern),
+        2000
+      );
+    }
+  }
+
+  function stopSiren() {
+    const siren = sirenRef.current;
+    sirenRef.current = null;
+    if (siren) {
+      try {
+        siren.osc.stop();
+        siren.lfo.stop();
+        siren.ctx.close();
+      } catch {
+        /* already stopped */
+      }
+    }
+    if (vibrateIntervalRef.current) {
+      clearInterval(vibrateIntervalRef.current);
+      vibrateIntervalRef.current = null;
+    }
+    navigator.vibrate?.(0);
+  }
+
+  useEffect(() => {
+    // Sounds while (and only while) the are-you-OK countdown is pending —
+    // stops on "أنا بخير", on escalation, and on leaving the page.
+    if (emergencyEvent?.escalation_status === "alert_pending") {
+      startSiren();
+    } else {
+      stopSiren();
+    }
+    return stopSiren;
+  }, [emergencyEvent?.escalation_status]);
 
   async function handleAutoEscalate() {
     if (!emergencyEvent?.id || escalating) {
@@ -586,6 +672,12 @@ function Chat() {
             </button>
           </div>
         </header>
+
+        {!isEmergencyMode && (
+          <div className="px-5 pt-4">
+            <ProfileReminderBanner />
+          </div>
+        )}
 
         {showLiveCall && <LiveCall onClose={() => setShowLiveCall(false)} />}
 
