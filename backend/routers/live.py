@@ -113,9 +113,19 @@ def _build_config():
     )
 
 
+CONTEXT_WRAPPER = (
+    "[رسالة نظام — المكالمة اتقطعت واتوصلت تاني. ده اللي اتقال قبل الانقطاع، "
+    "افتكره كله وكمّل من نفس النقطة: ممنوع تعيد سؤال اتسأل، وممنوع تبدأ من "
+    "الأول. رد دلوقتي بجملة واحدة قصيرة بس تطمّن إنك لسه معاه (زي: أنا معاك، "
+    "كمّل) ومتعيدش أي محتوى.]\n\n{summary}"
+)
+
+
 async def _pump_browser_to_gemini(ws: WebSocket, session) -> None:
-    """Binary frames are raw PCM16 mono 16kHz mic chunks; the only text
-    frame we honour is {"type":"end"}, which hangs up."""
+    """Binary frames are raw PCM16 mono 16kHz mic chunks. Text frames:
+    {"type":"end"} hangs up; {"type":"context","summary":...} restores the
+    conversation after an auto-reconnect (Gemini Live sessions have hard
+    time limits — without this the model forgets the whole call)."""
     from google.genai import types
 
     while True:
@@ -141,8 +151,20 @@ async def _pump_browser_to_gemini(ws: WebSocket, session) -> None:
             payload = json.loads(raw)
         except (ValueError, TypeError):
             continue
-        if isinstance(payload, dict) and payload.get("type") == "end":
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("type") == "end":
             return
+        if payload.get("type") == "context":
+            summary = str(payload.get("summary") or "").strip()[:4000]
+            if summary:
+                await session.send_client_content(
+                    turns=types.Content(
+                        role="user",
+                        parts=[types.Part(text=CONTEXT_WRAPPER.format(summary=summary))],
+                    ),
+                    turn_complete=True,
+                )
 
 
 async def _pump_gemini_to_browser(ws: WebSocket, session) -> None:

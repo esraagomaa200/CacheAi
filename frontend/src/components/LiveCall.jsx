@@ -106,6 +106,11 @@ function LiveCall({ onClose }) {
   const voiceCommandBufferRef = useRef("");
   const hangUpTimerRef = useRef(null);
   const hangUpRef = useRef(null);
+  // Mirror of `lines` + a reconnect marker: after an auto-reconnect the new
+  // Gemini session starts blank, so we replay the transcript as context —
+  // otherwise نجدة forgets the whole call and starts over (user report).
+  const linesRef = useRef([]);
+  const needsContextRestoreRef = useRef(false);
 
   const stopPlayback = useCallback(() => {
     scheduledRef.current.forEach((source) => {
@@ -190,6 +195,10 @@ function LiveCall({ onClose }) {
       prev.map((line) => (line.sealed ? line : { ...line, sealed: true }))
     );
   }, []);
+
+  useEffect(() => {
+    linesRef.current = lines;
+  }, [lines]);
 
   const playChunk = useCallback((arrayBuffer) => {
     const context = playContextRef.current;
@@ -324,6 +333,22 @@ function LiveCall({ onClose }) {
             if (!cancelled) {
               setStatus("connected");
             }
+            // After a reconnect, replay the transcript into the fresh Gemini
+            // session so نجدة continues instead of starting over.
+            if (needsContextRestoreRef.current) {
+              needsContextRestoreRef.current = false;
+              const summary = linesRef.current
+                .slice(-16)
+                .map((l) => `${l.role === "user" ? "المستخدم" : "نجدة"}: ${l.text}`)
+                .join("\n");
+              if (summary) {
+                try {
+                  socket.send(JSON.stringify({ type: "context", summary }));
+                } catch {
+                  /* socket died instantly — the next reconnect retries */
+                }
+              }
+            }
           };
 
           socket.onmessage = (event) => {
@@ -369,6 +394,7 @@ function LiveCall({ onClose }) {
             // hang up, so the call doesn't end — reopen a fresh session.
             stopPlayback();
             sealTranscript();
+            needsContextRestoreRef.current = true;
             setStatus("reconnecting");
             clearTimeout(reconnectTimerRef.current);
             reconnectTimerRef.current = setTimeout(connectSocket, 1000);
