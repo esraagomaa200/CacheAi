@@ -42,7 +42,7 @@ function Hero() {
     <section className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-white">
       <div className="absolute right-[12%] top-10 h-[420px] w-[420px] rounded-full bg-emerald-50/70 blur-3xl" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center px-8 lg:px-12">
+      <div className="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center px-4 sm:px-8 lg:px-12">
         <div className="z-10 w-full lg:w-1/2">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/70 px-4 py-2">
             <Sparkles size={16} strokeWidth={2} className="text-emerald-500" />
@@ -51,19 +51,19 @@ function Hero() {
             </span>
           </div>
 
-          <h1 className="max-w-[600px] text-5xl font-bold leading-[1.08] tracking-[-1.5px] text-[#0B2028] md:text-6xl">
+          <h1 className="max-w-[600px] text-4xl font-bold leading-[1.08] tracking-[-1.5px] text-[#0B2028] sm:text-5xl md:text-6xl">
             {t("home.title")}
           </h1>
 
-          <p className="mt-6 max-w-[520px] text-[17px] leading-7 text-[#40545C]">
+          <p className="mt-6 max-w-[520px] text-base leading-7 text-[#40545C] sm:text-[17px]">
             {t("home.description")}
           </p>
 
-          <div className="mt-8 flex items-center gap-5">
+          <div className="mt-8 flex flex-col items-stretch gap-3 min-[360px]:flex-row min-[360px]:items-center sm:gap-5">
             <button
               onClick={handleStartChatting}
               disabled={checkingAuth}
-              className="group flex items-center gap-4 rounded-xl bg-[#19A878] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#15966B] hover:shadow-lg disabled:cursor-wait disabled:opacity-70"
+              className="group flex items-center justify-center gap-4 rounded-xl bg-[#19A878] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#15966B] hover:shadow-lg disabled:cursor-wait disabled:opacity-70"
             >
               {checkingAuth ? t("common.checking") : t("home.startChatting")}
               <ArrowRight
@@ -74,7 +74,7 @@ function Hero() {
 
             <button
               onClick={() => navigate("/emergency-auth")}
-              className="flex items-center gap-3 rounded-xl border border-[#D8E1E1] bg-[#fd5d5d] px-6 py-3.5 text-[15px] font-semibold text-[#18323A] transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50"
+              className="flex items-center justify-center gap-3 rounded-xl border border-[#D8E1E1] bg-[#fd5d5d] px-6 py-3.5 text-[15px] font-semibold text-[#18323A] transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50"
             >
               {t("home.emergency")}
             </button>

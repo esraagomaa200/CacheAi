@@ -302,7 +302,7 @@ const handleSubmit = async (e) => {
   />
 
   {/* Full Name + Patient ID */}
-  <div className="grid grid-cols-2 gap-4 mb-4">
+  <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
     {/* Full Name */}
     <Field label={t("signup.fields.fullName")}>
@@ -344,7 +344,7 @@ const handleSubmit = async (e) => {
 
 
   {/* Date of Birth + Gender */}
-  <div className="grid grid-cols-2 gap-4 mb-4">
+  <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
     {/* Date of Birth */}
     <Field label={t("signup.fields.dateOfBirth")}>
@@ -406,7 +406,7 @@ const handleSubmit = async (e) => {
 
 
   {/* Email + Password */}
-  <div className="grid grid-cols-2 gap-4">
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
     {/* Email */}
     <Field label={t("signup.fields.email")}>
@@ -528,7 +528,7 @@ const handleSubmit = async (e) => {
           </label>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3">
 
           {CHRONIC_DISEASES.map(
             ({ id, icon: Icon }) => {
@@ -613,7 +613,7 @@ const handleSubmit = async (e) => {
 
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
           {/* Phone */}
           <Field label={t("signup.fields.emergencyPhone")}>

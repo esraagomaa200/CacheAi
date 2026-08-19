@@ -351,7 +351,7 @@ function EditProfile() {
 
   return (
 
-    <div className="flex min-h-screen bg-[#F8FAFB]">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
 
       {/* =================================================== */}
       {/* SIDEBAR */}

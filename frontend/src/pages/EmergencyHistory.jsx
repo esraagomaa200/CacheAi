@@ -107,7 +107,7 @@ function EmergencyHistory() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFB]">
+      <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
         <SidebarProfile />
 
         <main className="flex flex-1 items-center justify-center">
@@ -148,7 +148,7 @@ function EmergencyHistory() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFB]">
+      <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
         <SidebarProfile />
 
         <main className="flex flex-1 items-center justify-center px-6">
@@ -209,7 +209,7 @@ function EmergencyHistory() {
   /* ================================================= */
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFB]">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
 
       {/* ================= SIDEBAR ================= */}
 

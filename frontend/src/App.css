@@ -107,6 +107,57 @@ body {
   transform: scaleX(-1);
 }
 
+.mobile-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(9 18 22 / 48%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.mobile-sidebar-backdrop[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-sidebar-panel {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 50;
+  visibility: hidden;
+  transform: translateX(-105%);
+  transition:
+    transform 200ms ease,
+    visibility 200ms ease;
+}
+
+:root[dir="rtl"] .mobile-sidebar-panel {
+  transform: translateX(105%);
+}
+
+.mobile-sidebar-panel[data-open="true"] {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+@media (min-width: 64rem) {
+  .mobile-sidebar-backdrop {
+    display: none;
+  }
+
+  .mobile-sidebar-panel,
+  :root[dir="rtl"] .mobile-sidebar-panel {
+    position: sticky;
+    top: 0;
+    z-index: auto;
+    visibility: visible;
+    transform: none;
+  }
+}
+
 .theme-toggle {
   display: inline-flex;
   min-height: 2.5rem;

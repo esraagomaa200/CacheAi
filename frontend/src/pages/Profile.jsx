@@ -103,7 +103,7 @@ function Profile() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFB]">
+      <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
         <SidebarProfile />
 
         <main className="flex flex-1 items-center justify-center">
@@ -145,7 +145,7 @@ function Profile() {
 
   if (error || !profile) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFB]">
+      <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
         <SidebarProfile />
 
         <main className="flex flex-1 items-center justify-center">
@@ -217,7 +217,7 @@ function Profile() {
 
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFB]">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFB] lg:flex-row">
 
       {/* ================= SIDEBAR ================= */}
 

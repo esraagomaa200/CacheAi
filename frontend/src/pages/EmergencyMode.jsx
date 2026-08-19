@@ -94,7 +94,7 @@ function EmergencyMode() {
     <div className="min-h-screen bg-[#F8FCFA]">
 
       {/* Header */}
-      <header className="flex h-[72px] items-center justify-between border-b border-[#E5EEEB] bg-white px-8">
+      <header className="flex min-h-[72px] items-center justify-between border-b border-[#E5EEEB] bg-white px-3 min-[360px]:px-4 sm:px-8">
 
         {/* Logo */}
         <div className="flex items-center gap-2">
@@ -102,24 +102,24 @@ function EmergencyMode() {
           <img
             src={logo2}
             alt={t("auth.logoAlt")}
-            className="h-10 w-10 object-contain"
+            className="h-9 w-9 object-contain sm:h-10 sm:w-10"
           />
 
-          <span className="text-xl font-bold text-[#18323A]">
+          <span className="hidden text-xl font-bold text-[#18323A] min-[360px]:inline">
             Najda<span className="text-[#19A878]">AI</span>
           </span>
 
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <AppearanceControls compact />
 
           {/* Emergency Badge */}
-          <div className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
+          <div className="flex items-center gap-2 rounded-full bg-red-50 p-2 text-sm font-semibold text-red-600 sm:px-4">
 
             <LuTriangleAlert size={17} />
 
-            <span>{t("emergency.mode")}</span>
+            <span className="hidden sm:inline">{t("emergency.mode")}</span>
 
           </div>
         </div>
@@ -128,7 +128,7 @@ function EmergencyMode() {
 
 
       {/* Content */}
-      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center px-6 py-12">
+      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
 
         <div className="w-full max-w-[620px] text-center">
 
@@ -149,7 +149,7 @@ function EmergencyMode() {
 
 
           {/* Heading */}
-          <h1 className="mt-7 text-4xl font-bold tracking-tight text-[#18323A]">
+          <h1 className="mt-7 text-3xl font-bold tracking-tight text-[#18323A] sm:text-4xl">
             {t("emergency.title")}
           </h1>
 
@@ -161,7 +161,7 @@ function EmergencyMode() {
 
 
           {/* Warning Card */}
-          <div className="mt-8 flex gap-4 rounded-2xl border border-red-100 bg-red-50/70 p-5 text-left">
+          <div className="mt-8 flex gap-3 rounded-2xl border border-red-100 bg-red-50/70 p-4 text-left sm:gap-4 sm:p-5">
 
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
 
@@ -278,7 +278,8 @@ function EmergencyMode() {
             className="
               group
               mt-8
-              inline-flex
+              flex
+              w-full
               items-center
               justify-center
               gap-3
@@ -295,6 +296,8 @@ function EmergencyMode() {
               hover:-translate-y-0.5
               hover:bg-[#C83F3F]
               hover:shadow-lg
+              sm:inline-flex
+              sm:w-auto
             "
           >
 

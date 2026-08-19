@@ -90,16 +90,16 @@ function Header() {
 
   return (
     <header className="w-full border-b border-gray-100 bg-white">
-      <div className="mx-auto flex h-[72px] items-center justify-between px-8 lg:px-12">
+      <div className="mx-auto flex h-[72px] items-center justify-between px-3 min-[360px]:px-4 sm:px-8 lg:px-12">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <img
             src={logo2}
             alt={t("auth.logoAlt")}
-            className="h-11 w-11 object-contain"
+            className="h-9 w-9 object-contain sm:h-11 sm:w-11"
           />
 
-          <span className="text-[27px] font-bold tracking-[-0.8px] text-[#0B2028]">
+          <span className="hidden text-[22px] font-bold tracking-[-0.8px] text-[#0B2028] min-[360px]:inline sm:text-[27px]">
             Najda<span className="text-[#27B58A]">AI</span>
           </span>
         </div>
@@ -115,7 +115,7 @@ function Header() {
         </nav>
 
         {/* Right Side */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-2 sm:gap-5">
           <AppearanceControls compact />
 
           {/* Profile dropdown */}
@@ -126,7 +126,7 @@ function Header() {
               aria-expanded={isOpen}
               aria-haspopup="menu"
               onClick={() => setIsOpen((previous) => !previous)}
-              className="flex items-center gap-2 rounded-full transition-all duration-200 hover:opacity-70"
+              className="flex items-center gap-1 rounded-full transition-all duration-200 hover:opacity-70 sm:gap-2"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DDE5E5] bg-white">
                 <UserRound
@@ -139,7 +139,7 @@ function Header() {
               <ChevronDown
                 size={16}
                 strokeWidth={2}
-                className={`text-[#19323A] transition-transform duration-200 ${
+                className={`hidden text-[#19323A] transition-transform duration-200 sm:block ${
                   isOpen ? "rotate-180" : ""
                 }`}
               />
@@ -148,7 +148,7 @@ function Header() {
             {isOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-14 z-50 w-[270px] overflow-hidden rounded-xl border border-[#DDE5E5] bg-white shadow-[0_12px_35px_rgba(11,32,40,0.14)]"
+                className="absolute end-0 top-14 z-50 w-[calc(100vw-1.5rem)] max-w-[270px] overflow-hidden rounded-xl border border-[#DDE5E5] bg-white shadow-[0_12px_35px_rgba(11,32,40,0.14)]"
               >
                 <div className="border-b border-[#EDF1F0] px-4 py-4">
                   <div className="flex items-center gap-3">

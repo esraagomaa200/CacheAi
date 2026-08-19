@@ -7,6 +7,8 @@ import {
   LuHistory,
   LuUserRound,
   LuLogOut,
+  LuMenu,
+  LuX,
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
@@ -22,6 +24,7 @@ function SideBar() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionsError, setSessionsError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Chat.jsx fires this after a send completes (the server titles the session
   // then) so the history list picks up fresh titles without a route change.
@@ -32,6 +35,17 @@ function SideBar() {
   }, []);
 
   const activeSessionId = new URLSearchParams(location.search).get("session");
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,27 +91,73 @@ function SideBar() {
     };
   }, [location.search, refreshTick]);
 
+  const navigateFromSidebar = (path) => {
+    setMobileOpen(false);
+    navigate(path);
+  };
+
   return (
-    <aside className="flex h-screen w-[270px] flex-col border-r border-gray-100 bg-white px-5 py-6">
+    <>
+      <div className="flex h-16 w-full shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 lg:hidden">
+        <div className="flex items-center gap-2">
+          <img src={logo2} alt={t("auth.logoAlt")} className="h-8 w-8 object-contain" />
+          <span className="text-[18px] font-bold tracking-tight text-[#102832]">
+            Najda<span className="text-[#27B58A]">AI</span>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          aria-label={t("navigation.openMenu")}
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen(true)}
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-100 bg-white text-[#17353D]"
+        >
+          <LuMenu size={22} />
+        </button>
+      </div>
+
+      <div
+        className="mobile-sidebar-backdrop lg:hidden"
+        data-open={mobileOpen}
+        aria-hidden="true"
+        onClick={() => setMobileOpen(false)}
+      />
+
+      <aside
+        className="mobile-sidebar-panel flex h-screen w-[min(86vw,270px)] shrink-0 flex-col overflow-y-auto border-r border-gray-100 bg-white px-5 py-6 lg:w-[270px]"
+        data-open={mobileOpen}
+      >
 
       {/* Logo */}
-      <div className="mb-8 flex items-center gap-2 px-3">
-        <img
-          src={logo2}
-          alt={t("auth.logoAlt")}
-          className="h-8 w-8 object-contain"
-        />
+      <div className="mb-8 flex items-center justify-between gap-2 px-3">
+        <div className="flex items-center gap-2">
+          <img
+            src={logo2}
+            alt={t("auth.logoAlt")}
+            className="h-8 w-8 object-contain"
+          />
 
-        <span className="text-[20px] font-bold tracking-tight text-[#102832]">
-          Najda<span className="text-[#27B58A]">AI</span>
-        </span>
+          <span className="text-[20px] font-bold tracking-tight text-[#102832]">
+            Najda<span className="text-[#27B58A]">AI</span>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          aria-label={t("navigation.closeMenu")}
+          onClick={() => setMobileOpen(false)}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-[#455960] lg:hidden"
+        >
+          <LuX size={21} />
+        </button>
       </div>
 
       <AppearanceControls className="mb-5 w-full" />
 
       {/* New Chat */}
       <button
-        onClick={() => navigate("/chat")}
+        onClick={() => navigateFromSidebar("/chat")}
         className="
           mb-5
           flex
@@ -155,7 +215,7 @@ function SideBar() {
           {sessions.map((session) => (
             <button
               key={session.id}
-              onClick={() => navigate(`/chat?session=${session.id}`)}
+              onClick={() => navigateFromSidebar(`/chat?session=${session.id}`)}
               className={`
                 flex
                 w-full
@@ -192,7 +252,7 @@ function SideBar() {
         <SidebarItem
           icon={<LuUserRound />}
           label={t("navigation.profile")}
-          onClick={() => navigate("/profile")}
+          onClick={() => navigateFromSidebar("/profile")}
         />
 
       </nav>
@@ -204,7 +264,7 @@ function SideBar() {
         <button
           onClick={() => {
             clearAccessToken();
-            navigate("/login");
+            navigateFromSidebar("/login");
           }}
           className="
             mb-7
@@ -253,7 +313,8 @@ function SideBar() {
         </div>
 
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
