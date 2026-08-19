@@ -1,3 +1,5 @@
+import { expect } from "@playwright/test";
+
 // Shared helpers for the E2E suite.
 //
 // Design: every spec registers its own fresh backend user directly via the
@@ -13,6 +15,13 @@ let counter = 0;
 export function uniqueEmail(prefix = "e2e") {
   counter += 1;
   return `${prefix}${Date.now()}${counter}@test.com`;
+}
+
+/** A unique-per-run token for fields with a backend unique constraint
+ * (e.g. patient_id) that aren't emails. */
+export function uniqueId(prefix = "e2e") {
+  counter += 1;
+  return `${prefix}${Date.now()}${counter}`;
 }
 
 /**
@@ -76,6 +85,24 @@ export async function loginViaApi(page, request, overrides = {}) {
   const user = await registerUser(request, overrides);
   await seedAuth(page, user.token);
   return user;
+}
+
+/**
+ * Waits until the Chat page has finished its (possibly async) session
+ * init and is actually ready to accept a message.
+ *
+ * The message <input> has no `disabled` attribute (only the send button
+ * does), so it happily accepts typing/Enter while `initializing` is still
+ * true — e.g. while startEmergencySession() is awaiting POST
+ * /chat/sessions for ?mode=emergency. handleSend() silently no-ops in that
+ * window, so sending too early drops the message on the floor. The empty
+ * chat placeholder only renders once `!initializing && messages.length ===
+ * 0`, so waiting for it is a reliable readiness signal.
+ */
+export async function waitForChatReady(page) {
+  await expect(
+    page.getByText("ابدأ المحادثة الآن")
+  ).toBeVisible({ timeout: 15000 });
 }
 
 export function authHeaders(token) {

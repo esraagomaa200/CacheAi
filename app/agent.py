@@ -164,6 +164,12 @@ class MedicalRAGAgent:
         completion = self.client.chat.completions.create(
             model=GROQ_MODEL,
             temperature=0.2,
+            # Latency controls for the live demo: gpt-oss reasoning defaults
+            # to medium effort and unbounded length — both cost seconds.
+            # Grounding quality comes from the retrieved CONTEXT, not from
+            # long deliberation.
+            reasoning_effort="low",
+            max_completion_tokens=900,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"CONTEXT:\n{context}\n\nسؤال المستخدم: {question}"},

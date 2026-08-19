@@ -323,7 +323,7 @@ def _call_najda(user_content: str) -> dict | None:
     try:
         response = _najda_session.post(
             f"{NAJDA_RAG_URL.rstrip('/')}/chat",
-            json={"question": user_content, "top_k": 5},
+            json={"question": user_content, "top_k": 3},
             timeout=(2, 30),
         )
     except Exception:

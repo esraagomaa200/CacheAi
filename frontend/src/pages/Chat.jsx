@@ -166,6 +166,9 @@ function Chat() {
     }
 
     function resetToFreshChat() {
+      // Release send-flow ownership too, or revisiting the previous session
+      // from the sidebar hits the guard above and renders an empty thread.
+      selfCreatedSession.current = null;
       setSessionId(null);
       setMessages([]);
       setEmergencyEvent(null);
@@ -347,6 +350,10 @@ function Chat() {
       if (res.emergency_event) {
         setEmergencyEvent(res.emergency_event);
       }
+
+      // The server auto-titles the session from the first message AFTER this
+      // request — nudge the sidebar to refetch, or it shows "New Chat" forever.
+      window.dispatchEvent(new Event("najda:sessions-refresh"));
     } catch (err) {
       setError(err.message || "تعذر إرسال الرسالة.");
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));

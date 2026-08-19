@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 
+import { clearAccessToken } from "../lib/api";
+
 import {
   LuHouse,
   LuMessageSquare,
@@ -119,7 +121,8 @@ function SidebarProfile() {
   {/* Logout */}
   <button
     onClick={() => {
-      navigate("/");
+      clearAccessToken();
+      navigate("/login");
     }}
     className="
       mt-1

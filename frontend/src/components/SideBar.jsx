@@ -17,6 +17,15 @@ function SideBar() {
 
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // Chat.jsx fires this after a send completes (the server titles the session
+  // then) so the history list picks up fresh titles without a route change.
+  useEffect(() => {
+    const bump = () => setRefreshTick((t) => t + 1);
+    window.addEventListener("najda:sessions-refresh", bump);
+    return () => window.removeEventListener("najda:sessions-refresh", bump);
+  }, []);
 
   const activeSessionId = new URLSearchParams(location.search).get("session");
 
@@ -54,7 +63,7 @@ function SideBar() {
     return () => {
       cancelled = true;
     };
-  }, [location.search]);
+  }, [location.search, refreshTick]);
 
   return (
     <aside className="flex h-screen w-[270px] flex-col border-r border-gray-100 bg-white px-5 py-6">

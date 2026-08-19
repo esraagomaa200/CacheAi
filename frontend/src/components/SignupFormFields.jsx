@@ -196,7 +196,9 @@ const handleSubmit = async (e) => {
           email: formData.email,
           password: formData.password,
 
-          patient_id: formData.patientId,
+          // "" would collide on the unique patient_id column (NULL is exempt,
+          // empty string is not) — blank must reach the API as null.
+          patient_id: formData.patientId || null,
 
           date_of_birth:
             formData.dateOfBirth || null,

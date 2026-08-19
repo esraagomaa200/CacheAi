@@ -1,14 +1,18 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, seedAuth } from "./helpers.js";
+import { registerUser, seedAuth, uniqueId } from "./helpers.js";
 
 test.describe("profile", () => {
   test("profile page shows the data captured at registration", async ({
     page,
     request,
   }) => {
+    // patient_id has a unique constraint in the backend — it must be
+    // distinct per run, not a fixed literal (a fixed value collides with
+    // whatever a previous run of this same spec already committed).
+    const patientId = uniqueId("PID-");
     const user = await registerUser(request, {
       name: "Profile Data Check",
-      patient_id: "PID-12345",
+      patient_id: patientId,
       gender: "Male",
       blood_type: "O+",
       chronic_conditions: ["Asthma"],
@@ -23,7 +27,7 @@ test.describe("profile", () => {
       timeout: 15000,
     });
     await expect(page.getByText(user.email).first()).toBeVisible();
-    await expect(page.getByText("PID-12345").first()).toBeVisible();
+    await expect(page.getByText(patientId).first()).toBeVisible();
     await expect(page.getByText("O+").first()).toBeVisible();
     await expect(page.getByText("Sara Contact").first()).toBeVisible();
     await expect(page.getByText("01098765432").first()).toBeVisible();

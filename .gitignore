@@ -23,3 +23,7 @@ backend/*.db
 # node
 node_modules/
 frontend/dist/
+
+# playwright artifacts
+frontend/test-results/
+frontend/playwright-report/

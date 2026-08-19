@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginViaApi, BACKEND_URL, authHeaders } from "./helpers.js";
+import {
+  loginViaApi,
+  BACKEND_URL,
+  authHeaders,
+  waitForChatReady,
+} from "./helpers.js";
 
 const AI_REPLY_TIMEOUT = 60000;
 const COUNTDOWN_POLL_BUDGET_MS = 90000;
@@ -49,6 +54,12 @@ test.describe("emergency", () => {
 
     const input = page.getByPlaceholder("اكتب رسالتك...");
     await expect(input).toBeVisible({ timeout: 15000 });
+
+    // See waitForChatReady() jsdoc: startEmergencySession() is still
+    // awaiting POST /chat/sessions right after the input becomes visible,
+    // and handleSend() silently no-ops if Enter is pressed during that
+    // window.
+    await waitForChatReady(page);
 
     const redFlagMessage =
       "صدري بيوجعني جامد والألم بيمتد لدراعي الشمال وعرقان عرق بارد ومش قادر اتنفس";

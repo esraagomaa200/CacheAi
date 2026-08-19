@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaApi } from "./helpers.js";
+import { loginViaApi, waitForChatReady } from "./helpers.js";
 
 // AI replies can take 5-45s (external LLM engines) — chat expects need
 // generous timeouts.
@@ -21,6 +21,7 @@ test.describe("chat", () => {
 
     const input = page.getByPlaceholder("اكتب رسالتك...");
     await expect(input).toBeVisible({ timeout: 15000 });
+    await waitForChatReady(page);
 
     await input.fill("عندي صداع بسيط من الصبح");
     await input.press("Enter");
@@ -107,6 +108,7 @@ test.describe("chat", () => {
 
     const input = page.getByPlaceholder("اكتب رسالتك...");
     await expect(input).toBeVisible({ timeout: 15000 });
+    await waitForChatReady(page);
 
     await input.fill("رسالة قبل مسح المحادثة");
     await input.press("Enter");

@@ -477,7 +477,10 @@ class Retriever:
 
         return sorted(fused.values(), key=lambda x: x["rrf_score"], reverse=True)[:final_k]
 
-    def rerank_search(self, query, candidate_k=20, final_k=10):
+    def rerank_search(self, query, candidate_k=12, final_k=10):
+        # candidate_k lowered 20→12 for demo latency: CrossEncoder scoring on
+        # CPU dominates response time; 12 candidates keeps the reranker's
+        # quality benefit at roughly half the scoring cost.
         candidates = self.hybrid_search(query, final_k=candidate_k)
         if not candidates:
             return []
