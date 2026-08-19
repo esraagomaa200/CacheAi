@@ -138,7 +138,8 @@ body {
   transform: translateX(105%);
 }
 
-.mobile-sidebar-panel[data-open="true"] {
+.mobile-sidebar-panel[data-open="true"],
+:root[dir="rtl"] .mobile-sidebar-panel[data-open="true"] {
   visibility: visible;
   transform: translateX(0);
 }

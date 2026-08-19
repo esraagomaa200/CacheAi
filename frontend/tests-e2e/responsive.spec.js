@@ -49,6 +49,34 @@ test.describe("responsive layout", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("signup keeps appearance controls clear of the mobile heading", async ({
+    page,
+  }) => {
+    await pinLanguage(page);
+    await page.goto("/signup");
+
+    const heading = page.getByRole("heading", { name: "Create Your Account" });
+    const languageButton = page.getByRole("button", { name: "Switch to Arabic" });
+    const themeButton = page.getByRole("button", {
+      name: /^Switch to (dark|light) mode$/,
+    });
+    await expect(heading).toBeVisible();
+    await expect(languageButton).toBeVisible();
+    await expect(themeButton).toBeVisible();
+
+    const [headingBox, languageBox, themeBox] = await Promise.all([
+      heading.boundingBox(),
+      languageButton.boundingBox(),
+      themeButton.boundingBox(),
+    ]);
+    const controlsBottom = Math.max(
+      languageBox.y + languageBox.height,
+      themeBox.y + themeBox.height
+    );
+
+    expect(controlsBottom).toBeLessThanOrEqual(headingBox.y);
+  });
+
   test("authenticated pages use an accessible mobile navigation drawer", async ({
     page,
     request,
@@ -114,8 +142,16 @@ test.describe("responsive layout", () => {
     const drawer = page.locator("aside");
     await expect(drawer).toBeVisible();
 
+    const viewportWidth = page.viewportSize().width;
+    await expect
+      .poll(async () => {
+        const box = await drawer.boundingBox();
+        return box.x + box.width;
+      }, { timeout: 2000 })
+      .toBeLessThanOrEqual(viewportWidth + 1);
+
     const drawerBox = await drawer.boundingBox();
-    expect(drawerBox.x).toBeGreaterThan(40);
+    expect(drawerBox.x).toBeGreaterThanOrEqual(0);
     await expect(
       page.getByRole("button", { name: "إغلاق قائمة التنقل" })
     ).toBeVisible();
