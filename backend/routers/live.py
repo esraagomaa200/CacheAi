@@ -101,6 +101,15 @@ def _build_config():
         # blank.
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
+        # Default VAD waits too long after the user stops talking (felt as
+        # "delay" in live testing) — detect end-of-speech aggressively and
+        # start answering after ~0.5s of silence instead of ~1s.
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+                silence_duration_ms=500,
+            )
+        ),
     )
 
 
