@@ -9,11 +9,7 @@ export function normalizeLanguage(value) {
 export function detectLanguage({ storedLanguage, browserLanguages = [] }) {
   const stored = normalizeLanguage(storedLanguage);
   if (stored) return stored;
-  for (const candidate of browserLanguages) {
-    const normalized = normalizeLanguage(candidate);
-    if (normalized) return normalized;
-  }
-  return "en";
+  return normalizeLanguage(browserLanguages[0]) || "en";
 }
 
 export const getDirection = (language) =>

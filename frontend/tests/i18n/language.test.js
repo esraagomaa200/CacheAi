@@ -31,6 +31,13 @@ test("stored language wins and Arabic browser preference is detected", () => {
   );
 });
 
+test("uses only the primary browser language when no choice is stored", () => {
+  assert.equal(
+    detectLanguage({ storedLanguage: null, browserLanguages: ["fr-FR", "ar-EG"] }),
+    "en"
+  );
+});
+
 test("direction and formatting locale match the resolved language", () => {
   assert.equal(getDirection("ar"), "rtl");
   assert.equal(getDirection("en"), "ltr");

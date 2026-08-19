@@ -8,9 +8,7 @@ import en from "./locales/en.js";
 const browserLanguages =
   typeof navigator === "undefined"
     ? []
-    : navigator.languages?.length
-      ? navigator.languages
-      : [navigator.language];
+    : [navigator.languages?.[0] || navigator.language];
 
 const storedLanguage =
   typeof window === "undefined" ? null : readStoredLanguage(window.localStorage);
