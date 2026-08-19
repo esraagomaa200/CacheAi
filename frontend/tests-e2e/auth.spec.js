@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, seedAuth, uniqueEmail } from "./helpers.js";
+import { pinLanguage, registerUser, seedAuth, uniqueEmail } from "./helpers.js";
 
 test.describe("auth", () => {
   test("signup via UI creates an account and lands on /profile", async ({
@@ -8,6 +8,7 @@ test.describe("auth", () => {
     const email = uniqueEmail("signup");
     const password = "TestPass123!";
 
+    await pinLanguage(page);
     await page.goto("/signup");
 
     await page.getByPlaceholder("Enter your full name").fill("Signup Test User");
@@ -27,6 +28,7 @@ test.describe("auth", () => {
   }) => {
     const user = await registerUser(request);
 
+    await pinLanguage(page);
     await page.goto("/login");
 
     await page.getByPlaceholder("Enter your email").fill(user.email);
@@ -47,6 +49,7 @@ test.describe("auth", () => {
   }) => {
     const user = await registerUser(request);
 
+    await pinLanguage(page);
     await page.goto("/login");
 
     await page.getByPlaceholder("Enter your email").fill(user.email);
@@ -84,6 +87,7 @@ test.describe("auth", () => {
   test("unauthenticated visit to /chat redirects to /login", async ({
     page,
   }) => {
+    await pinLanguage(page);
     await page.goto("/chat");
     await page.waitForURL(/\/login$/, { timeout: 15000 });
     expect(page.url()).toMatch(/\/login$/);

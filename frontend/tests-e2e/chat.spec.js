@@ -52,18 +52,15 @@ test.describe("chat", () => {
 
     const input = page.getByPlaceholder("Type your message...");
     await expect(input).toBeVisible({ timeout: 15000 });
+    await waitForChatReady(page);
 
     // The "New Chat" button (create a new chat) is rendered before the
     // <nav> that holds Chat History + Profile, so it is always first in
-    // DOM/accessibility order — use .first() to disambiguate it from a
-    // same-named session entry (see note below).
+    // DOM/accessibility order — .first() disambiguates it defensively in
+    // case a session title ever collides with this label.
     const newChatButton = page.getByRole("button", { name: "New Chat" }).first();
-    const navButtons = page.getByRole("navigation").getByRole("button");
 
-    // Fresh user, no chats yet: only the "Profile" entry lives in the nav.
-    await expect(navButtons).toHaveCount(1, { timeout: 15000 });
-
-    const messageText = "اختبار سجل الجلسة الجانبي";
+    const messageText = "Sidebar history regression check";
     await input.fill(messageText);
     await input.press("Enter");
 
@@ -74,23 +71,20 @@ test.describe("chat", () => {
     // The session should now be reflected in the URL and in the sidebar.
     await expect(page).toHaveURL(/[?&]session=\d+/);
 
-    // A new entry appears in Chat History (session button + Profile = 2).
-    // NOTE: not asserting on the entry's label text here — SideBar.jsx
-    // fetches the session list on the location.search change fired right
-    // after session creation, which happens BEFORE sendMessage() sets the
-    // session's auto-title server-side, and there is no later refetch. So
-    // the sidebar entry is stuck showing the literal string "New Chat"
-    // instead of the real title, even though the thread underneath is
-    // correct. This is a genuine app bug (stale sidebar title), reported
-    // separately — this test instead verifies the real mechanic: a session
-    // entry exists and clicking it reloads the right thread.
-    await expect(navButtons).toHaveCount(2, { timeout: 15000 });
-    const sessionLink = navButtons.first();
+    // Chat.jsx dispatches "najda:sessions-refresh" right after the server
+    // auto-titles the session from this first message, and SideBar.jsx
+    // listens for it — so the sidebar entry shows the real title (not a
+    // stale "New Chat" placeholder from the pre-refresh fetch).
+    const sessionLink = page.getByRole("button", { name: messageText });
+    await expect(sessionLink).toBeVisible({ timeout: 15000 });
 
     const currentUrl = page.url();
 
     // Navigate away to a fresh chat, then click back into the session from
-    // the sidebar and confirm the same 2 messages reload.
+    // the sidebar and confirm the same 2 messages reload — not an empty
+    // thread (Chat.jsx's resetToFreshChat() must release
+    // selfCreatedSession.current, or this hits the "already own this
+    // session" guard and never re-fetches).
     await newChatButton.click();
     await expect(page).not.toHaveURL(currentUrl);
 
@@ -117,9 +111,9 @@ test.describe("chat", () => {
       timeout: AI_REPLY_TIMEOUT,
     });
 
-    // .first(): once this session exists, its stale sidebar entry also
-    // reads "New Chat" (see bug note in the previous test) — .first() picks
-    // the real "create new chat" button, which is first in DOM order.
+    // .first(): defensive disambiguation from the top nav button in case a
+    // session's own title ever happens to read "New Chat" too (DOM order
+    // puts the real "create new chat" button first regardless).
     await page.getByRole("button", { name: "New Chat" }).first().click();
 
     await expect(bubbleLocator(page)).toHaveCount(0, { timeout: 10000 });

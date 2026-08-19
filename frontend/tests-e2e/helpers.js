@@ -68,11 +68,41 @@ export async function registerUser(request, overrides = {}) {
   };
 }
 
+// The app is now bilingual (react-i18next) and defaults to English or the
+// browser locale if nothing is stored — never deterministic on its own. Every
+// test in this suite pins English explicitly so selectors have one fixed
+// target language (en.js preserves the app's original pre-i18n strings
+// verbatim, so this also matches the app's actual current default). A single
+// test may override to "ar" via its own addInitScript to specifically
+// exercise translation/localization behavior — see
+// profile.spec.js's gender-localization test. Storage key and accepted
+// values come from frontend/src/i18n/language.js (LANGUAGE_STORAGE_KEY,
+// readStoredLanguage).
+const LANGUAGE_STORAGE_KEY = "najda-language";
+const PINNED_LANGUAGE = "en";
+
+/**
+ * Pins the SPA's UI language before any app script runs. Must be called
+ * before page.goto(). seedAuth() already does this — call it directly only
+ * for flows that don't authenticate (signup, login, unauthenticated
+ * redirects).
+ */
+export async function pinLanguage(page, lang = PINNED_LANGUAGE) {
+  await page.addInitScript(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value);
+    },
+    { key: LANGUAGE_STORAGE_KEY, value: lang }
+  );
+}
+
 /**
  * Seeds the SPA's localStorage accessToken before any app script runs, so
- * the app boots already-authenticated. Must be called before page.goto().
+ * the app boots already-authenticated. Also pins the UI language (see
+ * pinLanguage). Must be called before page.goto().
  */
 export async function seedAuth(page, token) {
+  await pinLanguage(page);
   await page.addInitScript((t) => {
     window.localStorage.setItem("accessToken", t);
   }, token);
