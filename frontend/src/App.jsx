@@ -15,6 +15,7 @@ import EmergencyMode from "./pages/EmergencyMode";
 import MainLayout from "./layout/MainLayout";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
+import CompleteProfile from "./pages/CompleteProfile";
 import EmergencyAuth from "./pages/EmergencyAuth";
 import EmergencyHistory from "./pages/EmergencyHistory";
 import Login from "./pages/Login";
@@ -33,6 +34,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
 
         <Route path="/chat" element={<Chat />} />
         <Route path="/emergency-auth" element={<EmergencyAuth />} />

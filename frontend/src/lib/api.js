@@ -120,6 +120,13 @@ export function listEmergencyEvents() {
   return apiFetch("/emergency/events");
 }
 
+export function updateEmergencyContact(payload) {
+  return apiFetch("/profile/emergency-contact", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function mapBackendProfileToForm(data) {
   return {
     fullName: data.user?.name || "",

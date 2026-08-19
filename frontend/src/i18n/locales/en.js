@@ -283,6 +283,26 @@ const en = {
     updateSuccess: "Your profile was updated.",
     updateError: "Unable to update your profile.",
   },
+  completeProfile: {
+    title: "Complete Your Profile",
+    description:
+      "Before you continue, we need a way to reach someone on your behalf during an emergency.",
+    requiredBadge: "Required",
+    optionalBadge: "Optional",
+    requiredNote:
+      "This step is required so NajdaAI can notify someone if you don't respond during a safety check.",
+    optionalTitle: "A few more details (optional)",
+    optionalNote:
+      "Adding these now helps NajdaAI give you more accurate guidance. You can always fill them in later from your profile.",
+    saveAndContinue: "Save and continue",
+    saving: "Saving...",
+    skipRest: "Skip the rest for now",
+  },
+  profileReminder: {
+    message: "Your medical info is incomplete — complete it to get more accurate help.",
+    cta: "Complete your info",
+    dismiss: "Dismiss",
+  },
   emergency: {
     mode: "Emergency Mode",
     title: "Emergency Assistance",
@@ -300,6 +320,13 @@ const en = {
     },
     startChat: "Start Emergency Chat",
     authentication: "An account is required to use emergency chat",
+    quickContact: {
+      title: "Add an emergency contact",
+      description:
+        "If we can't reach you during a safety check, we'll notify this person instead.",
+      saveButton: "Save emergency number",
+      bypassLink: "Continue to emergency right away without saving",
+    },
     history: {
       title: "Emergency Event History",
       description:

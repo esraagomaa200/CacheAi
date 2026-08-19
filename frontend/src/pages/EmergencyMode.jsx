@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -5,14 +6,89 @@ import {
   LuTriangleAlert,
   LuArrowRight,
   LuShieldCheck,
+  LuPhone,
+  LuUser,
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
 import AppearanceControls from "../components/AppearanceControls";
+import {
+  apiFetch,
+  getAccessToken,
+  updateEmergencyContact,
+} from "../lib/api";
+import { getApiErrorKey } from "../i18n/api-error";
+
+const quickInputBase =
+  "h-11 w-full rounded-lg border border-[#E5D0D0] bg-white pl-10 pr-3 text-[14px] text-[#4A2E2E] placeholder-[#B79A9A] outline-none transition focus:border-[#D94B4B] focus:ring-2 focus:ring-red-100";
 
 function EmergencyMode() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // "checking" | "missing" | "present" | "unknown" (no token / load failed)
+  const [contactStatus, setContactStatus] = useState(() =>
+    getAccessToken() ? "checking" : "unknown"
+  );
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    apiFetch("/profile/me")
+      .then((data) => {
+        if (cancelled) return;
+        const contact = data?.emergency_contact;
+        const hasContact = Boolean(contact?.name?.trim() && contact?.phone?.trim());
+        setContactStatus(hasContact ? "present" : "missing");
+      })
+      .catch((err) => {
+        console.error("EmergencyMode: failed to load profile:", err);
+        if (!cancelled) {
+          setContactStatus("unknown");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function goToEmergencyChat() {
+    navigate("/chat?mode=emergency");
+  }
+
+  async function handleSaveContact(e) {
+    e.preventDefault();
+
+    if (!phone.trim() || saving) {
+      return;
+    }
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await updateEmergencyContact({
+        name: name.trim() || null,
+        phone: phone.trim(),
+        email: null,
+      });
+      setContactStatus("present");
+    } catch (err) {
+      console.error("Failed to save emergency contact:", err);
+      setSaveError(getApiErrorKey(err instanceof Error ? err.message : ""));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FCFA]">
@@ -132,9 +208,73 @@ function EmergencyMode() {
           </div>
 
 
+          {/* Quick emergency contact prompt — non-blocking */}
+          {contactStatus === "missing" && (
+            <div className="mt-6 rounded-2xl border border-[#F0D6D6] bg-white p-5 text-left">
+
+              <h3 className="text-sm font-bold text-[#8F3030]">
+                {t("emergency.quickContact.title")}
+              </h3>
+
+              <p className="mt-1 text-[13px] leading-5 text-[#7B5555]">
+                {t("emergency.quickContact.description")}
+              </p>
+
+              <form onSubmit={handleSaveContact} className="mt-4 flex flex-col gap-3 sm:flex-row">
+
+                <div className="relative flex-1">
+                  <LuUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#B79A9A]" size={16} />
+                  <input
+                    type="text"
+                    dir="auto"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("profile.placeholders.contactName")}
+                    className={quickInputBase}
+                  />
+                </div>
+
+                <div className="relative flex-1">
+                  <LuPhone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#B79A9A]" size={16} />
+                  <input
+                    type="tel"
+                    dir="ltr"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={t("profile.placeholders.phoneNumber")}
+                    className={quickInputBase}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!phone.trim() || saving}
+                  className="h-11 shrink-0 rounded-lg bg-[#D94B4B] px-5 text-[13px] font-semibold text-white transition hover:bg-[#C83F3F] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? t("completeProfile.saving") : t("emergency.quickContact.saveButton")}
+                </button>
+
+              </form>
+
+              {saveError && (
+                <p className="mt-3 text-[12px] text-red-600">{t(saveError)}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={goToEmergencyChat}
+                className="mt-4 text-[13px] font-semibold text-[#8F3030] underline hover:text-[#6E2323]"
+              >
+                {t("emergency.quickContact.bypassLink")}
+              </button>
+
+            </div>
+          )}
+
+
           {/* Start Emergency Chat */}
           <button
-            onClick={() => navigate("/chat?mode=emergency")}
+            onClick={goToEmergencyChat}
             className="
               group
               mt-8

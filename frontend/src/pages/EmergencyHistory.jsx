@@ -19,6 +19,7 @@ import SidebarProfile from "../components/SidebarProfile";
 import { getAccessToken, listEmergencyEvents } from "../lib/api";
 import { getApiErrorKey } from "../i18n/api-error";
 import { getFormattingLocale } from "../i18n/language";
+import useEmergencyContactGate from "../hooks/useEmergencyContactGate";
 
 /* ========================================================= */
 /* STATIC LOOKUPS                                             */
@@ -65,6 +66,9 @@ function formatDateTime(value, language) {
 function EmergencyHistory() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Redirects to /complete-profile when the emergency contact is missing.
+  useEmergencyContactGate();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);

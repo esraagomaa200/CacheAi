@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { pinLanguage, registerUser, seedAuth, uniqueEmail } from "./helpers.js";
 
 test.describe("auth", () => {
-  test("signup via UI creates an account and lands on /profile", async ({
+  test("signup via UI creates an account and routes through the profile-completion gate", async ({
     page,
   }) => {
     const email = uniqueEmail("signup");
@@ -18,8 +18,15 @@ test.describe("auth", () => {
 
     await page.getByRole("button", { name: "Create Account" }).click();
 
-    await page.waitForURL(/\/profile$/, { timeout: 20000 });
-    expect(page.url()).toMatch(/\/profile$/);
+    // The signup form doesn't collect an emergency contact, so the new
+    // account has none — SignupFormFields.jsx navigates to /profile, and
+    // useEmergencyContactGate immediately redirects to /complete-profile
+    // (carrying ?next=/profile) before /profile itself ever renders.
+    await page.waitForURL(/\/complete-profile/, { timeout: 20000 });
+    expect(page.url()).toContain("next=");
+    await expect(
+      page.getByRole("heading", { name: "Complete Your Profile" })
+    ).toBeVisible();
   });
 
   test("login with wrong password shows an error", async ({

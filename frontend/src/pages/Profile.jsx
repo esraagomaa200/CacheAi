@@ -15,11 +15,13 @@ import {
 } from "lucide-react";
 
 import SidebarProfile from "../components/SidebarProfile";
+import ProfileReminderBanner from "../components/ProfileReminderBanner";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch, mapBackendProfileToForm } from "../lib/api";
 import { getApiErrorKey } from "../i18n/api-error";
 import { getFormattingLocale } from "../i18n/language";
+import useEmergencyContactGate from "../hooks/useEmergencyContactGate";
 
 function formatProfileDate(value, language) {
   if (!value) return "";
@@ -54,6 +56,9 @@ function formatProfileGender(value, t) {
 function Profile() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+
+  // Redirects to /complete-profile when the emergency contact is missing.
+  useEmergencyContactGate();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -224,6 +229,8 @@ function Profile() {
       <main className="min-w-0 flex-1 overflow-y-auto px-6 py-7 lg:px-8 xl:px-10">
 
         <div className="mx-auto w-full max-w-7xl">
+
+          <ProfileReminderBanner profile={profile} />
 
           {/* ================= HEADER ================= */}
 

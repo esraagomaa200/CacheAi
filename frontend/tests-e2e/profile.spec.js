@@ -117,7 +117,15 @@ test.describe("profile", () => {
             blood_type: null,
             chronic_conditions: ["Asthma", "Diabetes"],
           },
-          emergency_contact: null,
+          // A present emergency contact keeps the profile-completion gate
+          // (useEmergencyContactGate) from redirecting away from /profile
+          // before this test's gender-localization assertions run — this
+          // spec isn't exercising the gate, so it's out of scope here.
+          emergency_contact: {
+            name: "Gender Check Contact",
+            phone: "01000000000",
+            email: null,
+          },
         }),
       })
     );
