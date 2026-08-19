@@ -1,7 +1,15 @@
 // Copy this file to: src/lib/api.js
 
+// Local dev talks to the backend directly; any other hostname means the
+// visitor came through a public tunnel, where the API is proxied same-origin
+// under /api (see vite.config.js) so CORS and mixed-content never bite.
+const isLocalHost =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_BASE_URL ||
+  (isLocalHost ? "http://127.0.0.1:8000" : "/api");
 
 export function getAccessToken() {
   return localStorage.getItem("accessToken");

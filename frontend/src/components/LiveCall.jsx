@@ -68,7 +68,12 @@ const STATUS_LABELS = {
 };
 
 function wsUrl() {
-  const base = API_BASE_URL.replace(/^http/, "ws");
+  // Absolute base (local dev): http→ws. Relative base ("/api" behind a public
+  // tunnel): build against the current origin so the socket rides the same
+  // tunnel — wss on https pages, ws otherwise.
+  const base = API_BASE_URL.startsWith("http")
+    ? API_BASE_URL.replace(/^http/, "ws")
+    : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${API_BASE_URL}`;
   return `${base}/chat/live?token=${encodeURIComponent(getAccessToken() || "")}`;
 }
 
