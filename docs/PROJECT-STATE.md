@@ -4,6 +4,26 @@
 
 ## 2026-08-19 — سباق ليلة التسليم (المسابقة)
 
+### Commit `3ef9ada` — push ✅ — E2E suite كاملة 18/18
+- **Playwright E2E**: 18 اختبار (auth/profile/chat/emergency UI/state-machine API) — كلهم خضر.
+  تشغيل مرئي: `E2E_HEADED=1 npx playwright test` من `frontend/`
+- **٤ باجات حقيقية اكتشفتها الـ suite واتصلحوا**: التسجيل كان مقفول فعليًا (patient_id ""
+  بدل null → 409 unique)، ثريد فاضي عند الرجوع لجلسة self-created، عناوين السايدبار
+  الثابتة "New Chat"، وlogout بتاع صفحات البروفايل مش بيمسح التوكن
+- **تسريع NAJDA**: مرشحين reranker 20→12، reasoning_effort=low + سقف tokens،
+  top_k 3 → السؤال السريري (warm) من ~60 لـ ~20 ثانية، والرفض خارج النطاق ~1 ثانية
+
+### Commit `d82708a` — push ✅ — دمج NAJDA + الـ router + شخصية triage جديدة
+- **Router بالصعوبة**: تحية → Groq gpt-oss-20b (~1-3 ث) · triage → **Groq gpt-oss-120b أساسي**
+  وGemini 3.6-flash احتياطي (كوتة Gemini المجانية ضربت 429 مستمر live) · سؤال سريري →
+  **محرك NAJDA** (بورت 8001) مع تصنيف الخطورة بالتوازي على Groq
+- **شخصية "نجدة" الجديدة**: مسعف بيسأل سؤال متابعة واحد للأعراض الغامضة، تصعيد بالعلامات
+  الحمرا الصريحة أو الأدلة المتراكمة بس (feedback مباشر من سبوكي) — اتحقق live بالمتصفح
+- **دمج شغل الزميلة**: app/ (hybrid retrieval + reranker + Qdrant Cloud 574 نقطة +
+  9 مصادر guidelines منضفة) — اتصلّح فيه: كراش cp1252 مع الأسئلة العربي (UTF-8 env)،
+  الـ normalizer اتقفل لصالح البديل المحلي، وgemini-2.5→3.6-flash
+- **أمان**: استعادة `.gitignore` بعد ما اتمسح (كان هيكشف كل مفاتيح root .env الجديدة)
+
 ### Commit `9f2018c` — push على `origin/main` ✅
 بوابة: pytest 2/2 · build ✅ · smoke **16/16** (مع اختبارات الـ 409 الجديدة) · فحص متصفح ✅
 
