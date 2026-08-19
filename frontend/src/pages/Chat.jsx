@@ -616,12 +616,12 @@ function Chat() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#FAFCFB]">
+    <div className="flex min-h-screen flex-col bg-[#FAFCFB] lg:flex-row">
       {/* Sidebar */}
       <SideBar />
 
       {/* Chat Area */}
-      <main className="flex min-h-screen flex-1 flex-col bg-white">
+      <main className="flex min-h-[calc(100vh-4rem)] min-w-0 flex-1 flex-col bg-white lg:min-h-screen">
         {/* Emergency Strip */}
         {isEmergencyMode && (
           <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-red-100 bg-red-50 px-7 py-2.5">
@@ -644,13 +644,31 @@ function Chat() {
         )}
 
         <header className="flex h-[72px] items-center justify-between border-b border-gray-100 px-7">
-          <h1 className="text-[15px] font-bold text-[#172B34]">
-            {isEmergencyMode
-              ? t("chat.emergencyTitle")
-              : sessionId
-                ? t("chat.title")
-                : t("chat.newTitle")}
-          </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="text-[15px] font-bold text-[#172B34]">
+              {isEmergencyMode
+                ? t("chat.emergencyTitle")
+                : sessionId
+                  ? t("chat.title")
+                  : t("chat.newTitle")}
+            </h1>
+
+            {/* Normal-chat risk badge — the emergency strip already carries
+                its own; here it appears once the first assessment exists and
+                follows the latest assistant reply. */}
+            {!isEmergencyMode && lastAssistantRisk && (
+              <span
+                title={t("chat.riskLevel")}
+                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold ${riskBadgeClass(
+                  lastAssistantRisk
+                )}`}
+              >
+                {RISK_LABELS[lastAssistantRisk]
+                  ? t(RISK_LABELS[lastAssistantRisk])
+                  : lastAssistantRisk}
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1">
             <button
