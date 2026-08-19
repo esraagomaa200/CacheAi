@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ShieldAlert } from "lucide-react";
-import ThemeToggle from "../components/ThemeToggle";
+import AppearanceControls from "../components/AppearanceControls";
 import {
   API_BASE_URL,
   formatApiError,
@@ -13,6 +14,7 @@ import {
 const GOOGLE_CLIENT_ID = "832987608983-d0g7flf8phslosqpjhmvpddgsc6t1vdi.apps.googleusercontent.com";
 
 export default function EmergencyAuth() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const buttonRef = useRef(null);
 
@@ -49,7 +51,7 @@ export default function EmergencyAuth() {
       navigate("/emergency");
     } catch (err) {
       console.error("Google sign-in error:", err);
-      setError(err.message || "Unable to sign in with Google.");
+      setError("errors.googleFailure");
     } finally {
       setLoading(false);
     }
@@ -65,9 +67,7 @@ export default function EmergencyAuth() {
 
         script.onload = () => {
       if (!GOOGLE_CLIENT_ID) {
-        setError(
-          "Google Client ID is missing. Add VITE_GOOGLE_CLIENT_ID to .env.local and restart the frontend."
-        );
+        setError("auth.googleClientMissing");
         return;
       }
 
@@ -98,7 +98,7 @@ export default function EmergencyAuth() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
-      <ThemeToggle compact className="absolute right-5 top-5 z-20" />
+      <AppearanceControls compact className="absolute right-5 top-5 z-20" />
 
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-[#E2EAE7] bg-white p-8 shadow-sm">
@@ -109,11 +109,11 @@ export default function EmergencyAuth() {
 
           {/* Title */}
           <h1 className="text-center text-2xl font-bold text-[#18323A]">
-            Emergency Mode
+            {t("auth.emergencyTitle")}
           </h1>
 
           <p className="mt-2 text-center text-sm leading-6 text-[#64748B]">
-            Sign in with your Google account to continue to Emergency Mode.
+            {t("auth.emergencyInstructions")}
           </p>
 
           {/* Google renders its own button here */}
@@ -123,19 +123,19 @@ export default function EmergencyAuth() {
 
           {loading && (
             <p className="mt-3 text-center text-sm text-[#64748B]">
-              Signing in...
+              {t("auth.signingIn")}
             </p>
           )}
 
           {/* Error */}
           {error && (
             <p className="mt-4 text-center text-sm text-red-500">
-              {error}
+              {t(error)}
             </p>
           )}
 
           <p className="mt-6 text-center text-xs leading-5 text-[#8A989D]">
-            Your Google account is only used to verify your identity.
+            {t("auth.emergencyIdentityNote")}
           </p>
         </div>
       </div>

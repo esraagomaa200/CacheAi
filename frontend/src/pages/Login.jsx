@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Mail, Lock, Eye, EyeOff, HeartPulse } from "lucide-react";
 
 import logo2 from "../assets/icons/Logo2.png";
-import ThemeToggle from "../components/ThemeToggle";
+import AppearanceControls from "../components/AppearanceControls";
 import {
   API_BASE_URL,
   apiFetch,
@@ -20,7 +21,16 @@ const GOOGLE_CLIENT_ID =
 const inputBase =
   "w-full h-11 pl-10 pr-4 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder-gray-400 bg-white outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
+function getLoginErrorKey(error) {
+  const detail = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return /incorrect|invalid|credential|unauthorized/.test(detail)
+    ? "errors.invalidCredentials"
+    : "errors.genericFailure";
+}
+
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const googleButtonRef = useRef(null);
 
@@ -34,7 +44,7 @@ export default function Login() {
     e.preventDefault();
 
     if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
+      setError("errors.requiredCredentials");
       return;
     }
 
@@ -57,7 +67,8 @@ export default function Login() {
       setAccessToken(data.access_token);
       navigate("/profile");
     } catch (err) {
-      setError(err.message || "Incorrect email or password");
+      console.error("Login error:", err);
+      setError(getLoginErrorKey(err));
     } finally {
       setLoading(false);
     }
@@ -85,7 +96,7 @@ export default function Login() {
       navigate("/profile");
     } catch (err) {
       console.error("Google sign-in error:", err);
-      setError(err.message || "Unable to sign in with Google.");
+      setError("errors.googleFailure");
     } finally {
       setLoading(false);
     }
@@ -99,9 +110,7 @@ export default function Login() {
 
     script.onload = () => {
       if (!GOOGLE_CLIENT_ID) {
-        setError(
-          "Google Client ID is missing. Add VITE_GOOGLE_CLIENT_ID to .env.local and restart the frontend."
-        );
+        setError("auth.googleClientMissing");
         return;
       }
 
@@ -131,7 +140,7 @@ export default function Login() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
-      <ThemeToggle compact className="absolute right-5 top-5 z-20" />
+      <AppearanceControls compact className="absolute right-5 top-5 z-20" />
 
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -139,7 +148,7 @@ export default function Login() {
           <div className="mb-6 flex items-center justify-center gap-2.5">
             <img
               src={logo2}
-              alt="NajdaAI Logo"
+              alt={t("auth.logoAlt")}
               className="h-11 w-11 object-contain"
             />
             <span className="text-2xl font-bold tracking-tight text-[#18323A]">
@@ -148,17 +157,17 @@ export default function Login() {
           </div>
 
           <h1 className="text-center text-xl font-bold text-[#18323A]">
-            Welcome Back
+            {t("auth.welcome")}
           </h1>
           <p className="mt-2 text-center text-sm leading-6 text-gray-500">
-            Sign in to continue to your account.
+            {t("auth.instructions")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4">
             {/* Email */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Email Address
+                {t("auth.emailLabel")}
               </label>
 
               <div className="relative flex items-center">
@@ -167,7 +176,7 @@ export default function Login() {
                   type="email"
                   autoComplete="email"
                   className={inputBase}
-                  placeholder="Enter your email"
+                  placeholder={t("auth.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -177,7 +186,7 @@ export default function Login() {
             {/* Password */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Password
+                {t("auth.passwordLabel")}
               </label>
 
               <div className="relative flex items-center">
@@ -186,7 +195,7 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   className={`${inputBase} pr-10`}
-                  placeholder="Enter your password"
+                  placeholder={t("auth.passwordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -195,7 +204,11 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   className="absolute right-3 text-gray-400 hover:text-gray-600"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPassword
+                      ? t("auth.hidePassword")
+                      : t("auth.showPassword")
+                  }
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -208,7 +221,7 @@ export default function Login() {
 
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {error}
+                {t(error)}
               </div>
             )}
 
@@ -217,14 +230,14 @@ export default function Login() {
               disabled={loading}
               className="mt-1 h-11 w-full rounded-lg bg-emerald-600 text-sm font-medium text-white transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? t("auth.signingIn") : t("auth.signIn")}
             </button>
           </form>
 
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs text-gray-400">or</span>
+            <span className="text-xs text-gray-400">{t("auth.divider")}</span>
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
@@ -234,18 +247,18 @@ export default function Login() {
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{" "}
+            {t("auth.noAccount")} {" "}
             <Link
               to="/signup"
               className="font-medium text-emerald-600 hover:underline"
             >
-              Sign up
+              {t("auth.signUp")}
             </Link>
           </p>
 
           <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-gray-400">
             <HeartPulse className="h-3.5 w-3.5" />
-            Your health data stays private and secure.
+            {t("auth.privacyNote")}
           </p>
         </div>
       </div>

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   API_BASE_URL,
   formatApiError,
@@ -27,12 +28,12 @@ import {
 } from "../lib/api";
 
 const CHRONIC_DISEASES = [
-  { id: "diabetes", label: "Diabetes", icon: Smartphone },
-  { id: "hypertension", label: "Hypertension", icon: Heart },
-  { id: "asthma", label: "Asthma", icon: Wind },
-  { id: "heart_disease", label: "Heart Disease", icon: HeartPulse },
-  { id: "kidney_disease", label: "Kidney Disease", icon: Activity },
-  { id: "other", label: "Other", icon: MoreHorizontal },
+  { id: "diabetes", value: "Diabetes", icon: Smartphone },
+  { id: "hypertension", value: "Hypertension", icon: Heart },
+  { id: "asthma", value: "Asthma", icon: Wind },
+  { id: "heart_disease", value: "Heart Disease", icon: HeartPulse },
+  { id: "kidney_disease", value: "Kidney Disease", icon: Activity },
+  { id: "other", value: "Other", icon: MoreHorizontal },
 ];
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -75,7 +76,16 @@ function InputShell({ icon: Icon, children }) {
 const inputBase =
   "w-full h-11 pl-10 pr-4 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder-gray-400 bg-white outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
+function getRegistrationErrorKey(error) {
+  const detail = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return /duplicate|already exists|already registered|unique/.test(detail)
+    ? "errors.duplicateEmail"
+    : "errors.registrationFailure";
+}
+
 export default function SignupFormFields() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -96,6 +106,7 @@ export default function SignupFormFields() {
   const [chronicDiseases, setChronicDiseases] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   // Update any form field
   const updateField = (field, value) => {
@@ -126,19 +137,19 @@ export default function SignupFormFields() {
     const nextErrors = {};
 
     if (!formData.fullName.trim()) {
-      nextErrors.fullName = "Enter your full name";
+      nextErrors.fullName = "errors.requiredName";
     }
 
     if (!formData.email.trim()) {
-      nextErrors.email = "Enter your email";
+      nextErrors.email = "errors.requiredEmail";
     }
 
     if (!formData.password.trim()) {
-      nextErrors.password = "Create a password";
+      nextErrors.password = "errors.requiredPassword";
     }
 
     if (!formData.agreeTerms) {
-      nextErrors.agreeTerms = "You must accept the terms";
+      nextErrors.agreeTerms = "errors.requiredTerms";
     }
 
     setErrors(nextErrors);
@@ -155,16 +166,10 @@ const handleSubmit = async (e) => {
     return;
   }
 
-  // Convert disease IDs into readable names
+  // Keep backend values stable while the visible labels follow the locale.
   const selectedDiseases = chronicDiseases
     .filter((id) => id !== "other")
-    .map((id) => {
-      const disease = CHRONIC_DISEASES.find(
-        (item) => item.id === id
-      );
-
-      return disease ? disease.label : id;
-    });
+    .map((id) => CHRONIC_DISEASES.find((disease) => disease.id === id)?.value || id);
 
   // Add "Other" condition
   if (
@@ -177,6 +182,7 @@ const handleSubmit = async (e) => {
   }
 
   try {
+    setSubmitting(true);
     /*
      * Send ALL signup data to backend
      */
@@ -271,10 +277,10 @@ const handleSubmit = async (e) => {
     );
 
     setErrors({
-      submit:
-        error.message ||
-        "Something went wrong while creating your account.",
+      submit: getRegistrationErrorKey(error),
     });
+  } finally {
+    setSubmitting(false);
   }
 };
 
@@ -286,11 +292,11 @@ const handleSubmit = async (e) => {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          Create Your Account
+          {t("signup.title")}
         </h1>
 
         <p className="text-sm text-gray-500 mt-1">
-          Fill in your information to get started.
+          {t("signup.instructions")}
         </p>
       </div>
 
@@ -299,18 +305,18 @@ const handleSubmit = async (e) => {
 
   <SectionHeader
     icon={User}
-    title="Personal Information"
+    title={t("signup.sections.personal")}
   />
 
   {/* Full Name + Patient ID */}
   <div className="grid grid-cols-2 gap-4 mb-4">
 
     {/* Full Name */}
-    <Field label="Full Name">
+    <Field label={t("signup.fields.fullName")}>
       <InputShell icon={User}>
         <input
           className={inputBase}
-          placeholder="Enter your full name"
+          placeholder={t("signup.placeholders.fullName")}
           value={formData.fullName}
           onChange={(e) =>
             updateField("fullName", e.target.value)
@@ -320,18 +326,18 @@ const handleSubmit = async (e) => {
 
       {errors.fullName && (
         <span className="text-xs text-red-500">
-          {errors.fullName}
+          {t(errors.fullName)}
         </span>
       )}
     </Field>
 
 
     {/* Patient ID */}
-    <Field label="Patient ID">
+    <Field label={t("signup.fields.patientId")}>
       <InputShell icon={CreditCard}>
         <input
           className={inputBase}
-          placeholder="Enter your ID number"
+          placeholder={t("signup.placeholders.patientId")}
           value={formData.patientId}
           onChange={(e) =>
             updateField("patientId", e.target.value)
@@ -347,7 +353,7 @@ const handleSubmit = async (e) => {
   <div className="grid grid-cols-2 gap-4 mb-4">
 
     {/* Date of Birth */}
-    <Field label="Date of Birth">
+    <Field label={t("signup.fields.dateOfBirth")}>
       <InputShell icon={CalendarDays}>
         <input
           type="date"
@@ -368,7 +374,7 @@ const handleSubmit = async (e) => {
 
 
     {/* Gender */}
-    <Field label="Gender">
+    <Field label={t("signup.fields.gender")}>
       <InputShell icon={User}>
         <select
           className={`${inputBase} appearance-none cursor-pointer`}
@@ -378,26 +384,26 @@ const handleSubmit = async (e) => {
           }
         >
           <option value="">
-            Select your gender
+            {t("signup.placeholders.gender")}
           </option>
 
           <option value="Male">
-            Male
+            {t("signup.gender.male")}
           </option>
 
           <option value="Female">
-            Female
+            {t("signup.gender.female")}
           </option>
 
           <option value="Prefer not to say">
-            Prefer not to say
+            {t("signup.gender.preferNotToSay")}
           </option>
         </select>
       </InputShell>
 
       {errors.gender && (
         <span className="text-xs text-red-500">
-          {errors.gender}
+          {t(errors.gender)}
         </span>
       )}
     </Field>
@@ -409,12 +415,12 @@ const handleSubmit = async (e) => {
   <div className="grid grid-cols-2 gap-4">
 
     {/* Email */}
-    <Field label="Email Address">
+    <Field label={t("signup.fields.email")}>
       <InputShell icon={Mail}>
         <input
           type="email"
           className={inputBase}
-          placeholder="Enter your email"
+          placeholder={t("signup.placeholders.email")}
           value={formData.email}
           onChange={(e) =>
             updateField("email", e.target.value)
@@ -424,14 +430,14 @@ const handleSubmit = async (e) => {
 
       {errors.email && (
         <span className="text-xs text-red-500">
-          {errors.email}
+          {t(errors.email)}
         </span>
       )}
     </Field>
 
 
     {/* Password */}
-    <Field label="Password">
+    <Field label={t("signup.fields.password")}>
       <div className="relative flex items-center">
 
         <Lock className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -439,7 +445,7 @@ const handleSubmit = async (e) => {
         <input
           type={showPassword ? "text" : "password"}
           className={`${inputBase} pr-10`}
-          placeholder="Create a password"
+          placeholder={t("signup.placeholders.password")}
           value={formData.password}
           onChange={(e) =>
             updateField("password", e.target.value)
@@ -454,8 +460,8 @@ const handleSubmit = async (e) => {
           className="absolute right-3 text-gray-400 hover:text-gray-600"
           aria-label={
             showPassword
-              ? "Hide password"
-              : "Show password"
+              ? t("auth.hidePassword")
+              : t("auth.showPassword")
           }
         >
           {showPassword ? (
@@ -469,7 +475,7 @@ const handleSubmit = async (e) => {
 
       {errors.password && (
         <span className="text-xs text-red-500">
-          {errors.password}
+          {t(errors.password)}
         </span>
       )}
     </Field>
@@ -482,12 +488,12 @@ const handleSubmit = async (e) => {
 
         <SectionHeader
           icon={Droplet}
-          title="Medical Information"
+          title={t("signup.sections.medical")}
         />
 
         {/* Blood Type */}
         <div className="mb-5">
-          <Field label="Blood Type">
+          <Field label={t("signup.fields.bloodType")}>
 
             <div className="relative flex items-center">
 
@@ -501,7 +507,7 @@ const handleSubmit = async (e) => {
                 }
               >
                 <option value="">
-                  Select your blood type
+                  {t("signup.placeholders.bloodType")}
                 </option>
 
                 {BLOOD_TYPES.map((bt) => (
@@ -519,9 +525,9 @@ const handleSubmit = async (e) => {
         {/* Chronic Diseases */}
         <div className="mb-2">
           <label className="text-sm font-medium text-gray-700">
-            Chronic Diseases{" "}
+            {t("signup.fields.chronicDiseases")} {" "}
             <span className="text-gray-400 font-normal">
-              (Select all that apply)
+              {t("signup.fields.selectAll")}
             </span>
           </label>
         </div>
@@ -529,7 +535,7 @@ const handleSubmit = async (e) => {
         <div className="grid grid-cols-3 gap-3 mb-4">
 
           {CHRONIC_DISEASES.map(
-            ({ id, label, icon: Icon }) => {
+            ({ id, icon: Icon }) => {
 
               const active =
                 chronicDiseases.includes(id);
@@ -548,7 +554,7 @@ const handleSubmit = async (e) => {
                   <Icon className="w-4 h-4 shrink-0" />
 
                   <span className="truncate">
-                    {label}
+                    {t(`signup.chronicDiseases.${id}`)}
                   </span>
                 </button>
               );
@@ -559,12 +565,12 @@ const handleSubmit = async (e) => {
 
         {/* Other Condition */}
         {chronicDiseases.includes("other") && (
-          <Field label="If other, please specify">
+          <Field label={t("signup.fields.otherCondition")}>
 
             <InputShell icon={Pencil}>
               <input
                 className={inputBase}
-                placeholder="Please specify your condition"
+                placeholder={t("signup.placeholders.otherCondition")}
                 value={formData.otherCondition}
                 onChange={(e) =>
                   updateField(
@@ -585,18 +591,18 @@ const handleSubmit = async (e) => {
 
         <SectionHeader
           icon={Phone}
-          title="Emergency Contact Information"
+          title={t("signup.sections.emergency")}
         />
 
         {/* Contact Name */}
         <div className="mb-4">
 
-          <Field label="Emergency Contact Name">
+          <Field label={t("signup.fields.emergencyName")}>
 
             <InputShell icon={User}>
               <input
                 className={inputBase}
-                placeholder="Enter contact name"
+                placeholder={t("signup.placeholders.emergencyName")}
                 value={formData.emergencyName}
                 onChange={(e) =>
                   updateField(
@@ -614,12 +620,12 @@ const handleSubmit = async (e) => {
         <div className="grid grid-cols-2 gap-4">
 
           {/* Phone */}
-          <Field label="Emergency Phone Number">
+          <Field label={t("signup.fields.emergencyPhone")}>
 
             <InputShell icon={Smartphone}>
               <input
                 className={inputBase}
-                placeholder="Enter phone number"
+                placeholder={t("signup.placeholders.emergencyPhone")}
                 value={formData.emergencyPhone}
                 onChange={(e) =>
                   updateField(
@@ -633,13 +639,13 @@ const handleSubmit = async (e) => {
           </Field>
 
           {/* Email */}
-          <Field label="Emergency Email">
+          <Field label={t("signup.fields.emergencyEmail")}>
 
             <InputShell icon={Mail}>
               <input
                 type="email"
                 className={inputBase}
-                placeholder="Enter email address"
+                placeholder={t("signup.placeholders.emergencyEmail")}
                 value={formData.emergencyEmail}
                 onChange={(e) =>
                   updateField(
@@ -674,22 +680,22 @@ const handleSubmit = async (e) => {
           />
 
           <span>
-            I agree to the{" "}
+            {t("signup.termsPrefix")} {" "}
 
             <a
               href="#"
               className="text-emerald-600 hover:underline"
             >
-              Terms of Service
+              {t("signup.termsOfService")}
             </a>{" "}
 
-            and{" "}
+            {t("signup.termsAnd")} {" "}
 
             <a
               href="#"
               className="text-emerald-600 hover:underline"
             >
-              Privacy Policy
+              {t("signup.privacyPolicy")}
             </a>
           </span>
 
@@ -697,7 +703,7 @@ const handleSubmit = async (e) => {
 
         {errors.agreeTerms && (
           <span className="block text-xs text-red-500 mt-1">
-            {errors.agreeTerms}
+          {t(errors.agreeTerms)}
           </span>
         )}
 
@@ -705,16 +711,17 @@ const handleSubmit = async (e) => {
 
         {errors.submit && (
   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-    {errors.submit}
+    {t(errors.submit)}
   </div>
 )}
 
       {/* Create Account */}
       <button
         type="submit"
+        disabled={submitting}
         className="w-full h-12 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] transition-all text-white font-medium flex items-center justify-center gap-2"
       >
-        Create Account
+        {submitting ? t("signup.creatingAccount") : t("signup.createAccount")}
 
         <ArrowRight className="w-4 h-4" />
       </button>
@@ -722,13 +729,13 @@ const handleSubmit = async (e) => {
       {/* Sign In */}
       <p className="text-center text-sm text-gray-500 mt-4">
 
-        Already have an account?{" "}
+        {t("signup.existingAccount")} {" "}
 
         <Link
           to="/login"
           className="text-emerald-600 hover:underline font-medium"
         >
-          Sign in
+          {t("signup.signIn")}
         </Link>
 
       </p>

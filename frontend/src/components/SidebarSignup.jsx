@@ -5,8 +5,11 @@ import {
   LuUserRound,
   LuHeartPulse,
 } from "react-icons/lu";
+import { useTranslation } from "react-i18next";
 
 function SidebarSignUp() {
+  const { t } = useTranslation();
+
   return (
     <aside className="hidden min-h-screen w-[38%] flex-col bg-[#F3FBF8] px-12 py-10 lg:flex">
 
@@ -14,7 +17,7 @@ function SidebarSignUp() {
       <div className="flex items-center gap-2">
         <img
           src={logo2}
-          alt="CacheAI"
+          alt={t("signup.sidebar.logoAlt")}
           className="h-10 w-10 object-contain"
         />
 
@@ -28,18 +31,17 @@ function SidebarSignUp() {
       <div className="mt-16">
 
         <h1 className="max-w-[400px] text-[42px] font-bold leading-[1.15] text-[#102832]">
-          Create Your
+          {t("signup.sidebar.titleStart")}
           <br />
 
           <span className="text-[#19A878]">
-            Health
+            {t("signup.sidebar.titleHighlight")}
           </span>{" "}
-          Profile
+          {t("signup.sidebar.titleEnd")}
         </h1>
 
         <p className="mt-5 max-w-[380px] text-[17px] leading-7 text-[#53676E]">
-          Help us personalize your experience and provide
-          you with accurate medical support.
+          {t("signup.sidebar.description")}
         </p>
 
       </div>
@@ -137,12 +139,11 @@ function SidebarSignUp() {
 
           <div>
             <h3 className="text-[14px] font-bold text-[#18323A]">
-              Your Data is Safe
+              {t("signup.sidebar.dataSafe.title")}
             </h3>
 
             <p className="mt-1 max-w-[270px] text-[12px] leading-5 text-[#61747A]">
-              We use industry-standard encryption to protect
-              your information.
+              {t("signup.sidebar.dataSafe.description")}
             </p>
           </div>
 
@@ -161,12 +162,11 @@ function SidebarSignUp() {
 
           <div>
             <h3 className="text-[14px] font-bold text-[#18323A]">
-              Personalized Care
+              {t("signup.sidebar.personalizedCare.title")}
             </h3>
 
             <p className="mt-1 max-w-[270px] text-[12px] leading-5 text-[#61747A]">
-              Get medical support tailored to your health
-              profile.
+              {t("signup.sidebar.personalizedCare.description")}
             </p>
           </div>
 
@@ -185,12 +185,11 @@ function SidebarSignUp() {
 
           <div>
             <h3 className="text-[14px] font-bold text-[#18323A]">
-              Better Assistance
+              {t("signup.sidebar.betterAssistance.title")}
             </h3>
 
             <p className="mt-1 max-w-[270px] text-[12px] leading-5 text-[#61747A]">
-              Help our AI assistant understand you better
-              for accurate answers.
+              {t("signup.sidebar.betterAssistance.description")}
             </p>
           </div>
 
