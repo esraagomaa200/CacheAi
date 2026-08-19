@@ -1,21 +1,32 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import Base, engine
+from models import EmergencyContact, Message, PatientProfile, ChatSession, User
 from routers.auth import router as auth_router
 from routers.chat import router as chat_router
 from routers.profile import router as profile_router
 
-app = FastAPI()
+load_dotenv()
 
-# Allow the frontend dev server(s) to call this API.
-# Add/replace with whatever origin your frontend actually runs on
-# (check the URL in your browser's address bar while developing).
+app = FastAPI(title="NajdaAI Backend", version="1.0.0")
+
+configured_origins = os.getenv("FRONTEND_ORIGINS", "").strip()
 origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    origin.strip()
+    for origin in configured_origins.split(",")
+    if origin.strip()
 ]
+if not origins:
+    origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,8 +41,18 @@ app.include_router(chat_router)
 app.include_router(profile_router)
 
 
+@app.on_event("startup")
+def create_tables() -> None:
+    # This is intentionally non-destructive. It creates missing tables but
+    # never drops the user's existing Chat or patient data.
+    Base.metadata.create_all(bind=engine)
+
+
 @app.get("/")
 def root():
-    return {
-        "message": "CacheAI Backend is running!"
-    }
+    return {"message": "NajdaAI Backend is running!"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

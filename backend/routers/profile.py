@@ -1,169 +1,177 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, PatientProfile, EmergencyContact
-from routers.auth import get_current_user
-from pydantic import BaseModel
+from dependencies import get_current_user
+from models import EmergencyContact, PatientProfile, User
+from schemas import EmergencyContactUpdate, ProfileUpdateRequest
+
+router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
-router = APIRouter(
-    prefix="/profile",
-    tags=["Profile"]
-)
-
-
-# =========================================================
-# REQUEST SCHEMAS
-# =========================================================
-
-class EmergencyContactRequest(BaseModel):
-    name: str | None = None
-    phone: str | None = None
-    email: str | None = None
-
-
-class UpdateProfileRequest(BaseModel):
-    name: str | None = None
-    patient_id: str | None = None
-    blood_type: str | None = None
-    chronic_conditions: list[str] | None = None
-    emergency_contact: EmergencyContactRequest | None = None
-
-
-# =========================================================
-# GET MY PROFILE
-# =========================================================
-
-@router.get("/me")
-def get_my_profile(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    patient_profile = db.query(PatientProfile).filter(
-        PatientProfile.user_id == current_user.id
+def _profile_response(user: User, db: Session) -> dict:
+    patient = db.query(PatientProfile).filter(
+        PatientProfile.user_id == user.id
     ).first()
-
-    emergency_contact = db.query(EmergencyContact).filter(
-        EmergencyContact.user_id == current_user.id
+    contact = db.query(EmergencyContact).filter(
+        EmergencyContact.user_id == user.id
     ).first()
 
     return {
         "user": {
-            "id": current_user.id,
-            "name": current_user.name,
-            "email": current_user.email
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "auth_provider": user.auth_provider,
         },
-
         "patient_profile": {
-            "patient_id": patient_profile.patient_id
-            if patient_profile else None,
-
-            "blood_type": patient_profile.blood_type
-            if patient_profile else None,
-
-            "chronic_conditions": patient_profile.chronic_conditions
-            if patient_profile else None
+            "patient_id": patient.patient_id if patient else None,
+            "date_of_birth": (
+                patient.date_of_birth.isoformat()
+                if patient and patient.date_of_birth
+                else None
+            ),
+            "gender": patient.gender if patient else None,
+            "blood_type": patient.blood_type if patient else None,
+            "chronic_conditions": (
+                patient.chronic_conditions
+                if patient and patient.chronic_conditions
+                else []
+            ),
         },
-
         "emergency_contact": {
-            "name": emergency_contact.name
-            if emergency_contact else None,
-
-            "phone": emergency_contact.phone
-            if emergency_contact else None,
-
-            "email": emergency_contact.email
-            if emergency_contact else None
-        }
+            "name": contact.name if contact else None,
+            "phone": contact.phone if contact else None,
+            "email": contact.email if contact else None,
+        },
     }
 
 
-# =========================================================
-# UPDATE MY PROFILE
-# =========================================================
+def _get_or_create_patient(user: User, db: Session) -> PatientProfile:
+    patient = db.query(PatientProfile).filter(
+        PatientProfile.user_id == user.id
+    ).first()
+    if patient is None:
+        patient = PatientProfile(user_id=user.id, chronic_conditions=[])
+        db.add(patient)
+        db.flush()
+    return patient
+
+
+def _upsert_contact(
+    user: User,
+    db: Session,
+    data: EmergencyContactUpdate,
+) -> EmergencyContact:
+    contact = db.query(EmergencyContact).filter(
+        EmergencyContact.user_id == user.id
+    ).first()
+    if contact is None:
+        contact = EmergencyContact(user_id=user.id)
+        db.add(contact)
+
+    if data.name is not None:
+        contact.name = data.name
+    if data.phone is not None:
+        contact.phone = data.phone
+    if data.email is not None:
+        contact.email = str(data.email)
+    return contact
+
+
+@router.get("/me")
+def get_my_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _profile_response(current_user, db)
+
 
 @router.put("/me")
 def update_my_profile(
-    data: UpdateProfileRequest,
+    data: ProfileUpdateRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-
-    # -----------------------------------------------------
-    # Update basic user information
-    # -----------------------------------------------------
-
     if data.name is not None:
-        current_user.name = data.name
+        current_user.name = data.name.strip()
+    if data.email is not None:
+        new_email = str(data.email).lower().strip()
+        existing = db.query(User).filter(
+            User.email == new_email,
+            User.id != current_user.id,
+        ).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Email already registered")
+        current_user.email = new_email
 
+    patient = _get_or_create_patient(current_user, db)
+    for field in (
+        "patient_id",
+        "date_of_birth",
+        "gender",
+        "blood_type",
+        "chronic_conditions",
+    ):
+        value = getattr(data, field)
+        if value is not None:
+            setattr(patient, field, value)
 
-    # -----------------------------------------------------
-    # Patient Profile
-    # -----------------------------------------------------
-
-    patient_profile = db.query(PatientProfile).filter(
-        PatientProfile.user_id == current_user.id
-    ).first()
-
-    if patient_profile is None:
-
-        patient_profile = PatientProfile(
-            user_id=current_user.id
+    nested_contact = data.emergency_contact
+    flat_contact_values = {
+        "name": data.emergency_name,
+        "phone": data.emergency_phone,
+        "email": data.emergency_email,
+    }
+    has_flat_contact = any(value is not None for value in flat_contact_values.values())
+    if nested_contact is not None:
+        _upsert_contact(current_user, db, nested_contact)
+    elif has_flat_contact:
+        _upsert_contact(
+            current_user,
+            db,
+            EmergencyContactUpdate(**flat_contact_values),
         )
 
-        db.add(patient_profile)
+    try:
+        db.commit()
+        db.refresh(current_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Profile data conflicts with an existing record")
 
-    if data.patient_id is not None:
-        patient_profile.patient_id = data.patient_id
-
-    if data.blood_type is not None:
-        patient_profile.blood_type = data.blood_type
-
-    if data.chronic_conditions is not None:
-        patient_profile.chronic_conditions = data.chronic_conditions
+    return _profile_response(current_user, db)
 
 
-    # -----------------------------------------------------
-    # Emergency Contact
-    # -----------------------------------------------------
-
-    if data.emergency_contact is not None:
-
-        emergency_contact = db.query(EmergencyContact).filter(
-            EmergencyContact.user_id == current_user.id
-        ).first()
-
-        if emergency_contact is None:
-
-            emergency_contact = EmergencyContact(
-                user_id=current_user.id,
-                name=data.emergency_contact.name or "",
-                phone=data.emergency_contact.phone or "",
-                email=data.emergency_contact.email
-            )
-
-            db.add(emergency_contact)
-
-        else:
-
-            if data.emergency_contact.name is not None:
-                emergency_contact.name = data.emergency_contact.name
-
-            if data.emergency_contact.phone is not None:
-                emergency_contact.phone = data.emergency_contact.phone
-
-            if data.emergency_contact.email is not None:
-                emergency_contact.email = data.emergency_contact.email
-
-
-    # -----------------------------------------------------
-    # Save
-    # -----------------------------------------------------
-
+@router.put("/emergency-contact")
+def update_emergency_contact(
+    data: EmergencyContactUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    contact = _upsert_contact(current_user, db, data)
     db.commit()
-    db.refresh(current_user)
-
+    db.refresh(contact)
     return {
-        "message": "Profile updated successfully"
+        "message": "Emergency contact updated successfully",
+        "emergency_contact": {
+            "name": contact.name,
+            "phone": contact.phone,
+            "email": contact.email,
+        },
     }
+
+
+@router.delete("/emergency-contact", status_code=status.HTTP_204_NO_CONTENT)
+def delete_emergency_contact(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    contact = db.query(EmergencyContact).filter(
+        EmergencyContact.user_id == current_user.id
+    ).first()
+    if contact:
+        db.delete(contact)
+        db.commit()
+    return None
