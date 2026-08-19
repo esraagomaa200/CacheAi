@@ -95,6 +95,12 @@ function LiveCall({ onClose }) {
   // blips) auto-reconnects while the mic pipeline stays alive.
   const userEndedRef = useRef(false);
   const reconnectTimerRef = useRef(null);
+  // Voice hang-up command support: rolling buffer of the user's recent
+  // transcript + a ref to hangUp so appendTranscript (created earlier)
+  // can call it without a dependency cycle.
+  const voiceCommandBufferRef = useRef("");
+  const hangUpTimerRef = useRef(null);
+  const hangUpRef = useRef(null);
 
   const stopPlayback = useCallback(() => {
     scheduledRef.current.forEach((source) => {
@@ -155,6 +161,23 @@ function LiveCall({ onClose }) {
       }
       return [...prev, { id: `${role}-${Date.now()}-${prev.length}`, role, text, sealed: false }];
     });
+
+    // Voice hang-up: "اقفل المكالمة" (and friends) spoken by the USER ends
+    // the call — after a short grace so نجدة's goodbye can play.
+    if (role === "user" && !hangUpTimerRef.current) {
+      const normalized = (voiceCommandBufferRef.current + text)
+        .replace(/[أإآ]/g, "ا")
+        .replace(/ة/g, "ه")
+        .replace(/[^؀-ۿ\s]/g, " ");
+      voiceCommandBufferRef.current = normalized.slice(-80);
+      const wantsHangUp =
+        /(اقفل|قفل|انهي|انه)[^.]{0,15}(المكالمه|مكالمه)/.test(normalized) ||
+        /(اقفل|انهي)\s*(يا\s*)?نجد[هة]?/.test(normalized) ||
+        /خلاص\s*اقفل/.test(normalized);
+      if (wantsHangUp) {
+        hangUpTimerRef.current = setTimeout(() => hangUpRef.current?.(), 2500);
+      }
+    }
   }, []);
 
   const sealTranscript = useCallback(() => {
@@ -199,9 +222,14 @@ function LiveCall({ onClose }) {
   const hangUp = useCallback(() => {
     userEndedRef.current = true;
     clearTimeout(reconnectTimerRef.current);
+    clearTimeout(hangUpTimerRef.current);
     teardown();
     setStatus((current) => (current === "error" ? current : "ended"));
   }, [teardown]);
+
+  useEffect(() => {
+    hangUpRef.current = hangUp;
+  }, [hangUp]);
 
   useEffect(() => {
     let cancelled = false;
@@ -356,6 +384,7 @@ function LiveCall({ onClose }) {
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimerRef.current);
+      clearTimeout(hangUpTimerRef.current);
       teardown();
     };
   }, [appendTranscript, playChunk, sealTranscript, stopPlayback, teardown]);
