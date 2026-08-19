@@ -27,3 +27,6 @@ frontend/dist/
 # playwright artifacts
 frontend/test-results/
 frontend/playwright-report/
+
+# local git worktrees
+.worktrees/
