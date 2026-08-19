@@ -607,8 +607,10 @@ function Chat() {
     return emergencyEvent?.risk_level || null;
   }, [messages, emergencyEvent]);
 
+  // High/emergency warnings are not exclusive to emergency mode anymore:
+  // an emergency detected inside a normal chat runs the full safety flow.
   const showRiskBanner =
-    isEmergencyMode &&
+    (isEmergencyMode || Boolean(emergencyEvent)) &&
     (lastAssistantRisk === "high" || lastAssistantRisk === "emergency");
 
   if (!getAccessToken()) {
@@ -699,9 +701,9 @@ function Chat() {
 
         {showLiveCall && <LiveCall onClose={() => setShowLiveCall(false)} />}
 
-        {/* Countdown / Escalated card */}
-        {isEmergencyMode &&
-          emergencyEvent?.escalation_status === "alert_pending" && (
+        {/* Countdown / Escalated card — driven by the event itself, so an
+            emergency caught in a NORMAL chat gets the same safety flow. */}
+        {emergencyEvent?.escalation_status === "alert_pending" && (
             <div className="mx-5 mt-4 flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-center">
               <p className="text-[14px] font-semibold text-red-700">
                 {t("chat.safetyPrompt")}
@@ -732,7 +734,7 @@ function Chat() {
             </div>
           )}
 
-        {isEmergencyMode && emergencyEvent?.escalation_status === "escalated" && (
+        {emergencyEvent?.escalation_status === "escalated" && (
           <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-6 py-4">
             <span className="text-2xl" aria-hidden="true">📞</span>
 

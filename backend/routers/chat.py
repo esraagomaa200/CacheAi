@@ -264,6 +264,31 @@ def send_message(
             event.risk_level = result["risk_level"]
             event.condition = result["condition"]
             event.escalation_status = "alert_pending"
+    elif result["risk_level"] == "emergency":
+        # Emergency detected inside a NORMAL chat: the user who didn't even
+        # realize they're in danger deserves the full safety flow — the event
+        # lands in the emergency history and the client runs the countdown/
+        # siren/escalation exactly like emergency mode. "high" deliberately
+        # doesn't trigger this (badge + red banner only) to avoid false
+        # alarms; explicit "emergency" assessments only.
+        event = _latest_event(session.id, db)
+        if event is not None and event.escalation_status in ("monitoring", "alert_pending"):
+            event.risk_level = "emergency"
+            event.condition = result["condition"]
+            event.escalation_status = "alert_pending"
+        else:
+            # No event yet, or the previous one is terminal — a fresh
+            # emergency in the same conversation is a new event.
+            event = EmergencyEvent(
+                user_id=current_user.id,
+                chat_session_id=session.id,
+                condition=result["condition"],
+                risk_level="emergency",
+                escalation_status="alert_pending",
+                timer_seconds=60,
+            )
+            db.add(event)
+            db.flush()
 
     # 6. Auto-title the session from the first user message.
     if is_first_user_message and _is_untitled(session.title):
