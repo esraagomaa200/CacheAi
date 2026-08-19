@@ -343,8 +343,12 @@ const en = {
   appearance: {
     switchToArabic: "Switch to Arabic",
     switchToEnglish: "Switch to English",
+    switchToLight: "Switch to light mode",
+    switchToDark: "Switch to dark mode",
     arabic: "عربي",
     english: "EN",
+    light: "Light",
+    dark: "Dark",
   },
 };
 

@@ -223,6 +223,7 @@ function EditProfile() {
   const [chronicDiseases, setChronicDiseases] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loadStatus, setLoadStatus] = useState("loading");
 
 
   /* ======================================================= */
@@ -253,8 +254,10 @@ function EditProfile() {
           otherCondition: "",
         });
         setChronicDiseases(profile.chronicDiseases);
+        setLoadStatus("loaded");
       } catch (loadError) {
         console.error("Failed to load profile:", loadError);
+        setLoadStatus("error");
         setError(
           getApiErrorKey(loadError instanceof Error ? loadError.message : "")
         );
@@ -316,6 +319,9 @@ function EditProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loadStatus !== "loaded" || saving) {
+      return;
+    }
     setSaving(true);
     setError("");
 
@@ -1075,6 +1081,7 @@ function EditProfile() {
 
               <button
                 type="submit"
+                disabled={loadStatus !== "loaded" || saving}
                 className="
                   flex
                   items-center
@@ -1091,6 +1098,8 @@ function EditProfile() {
                   hover:bg-[#15966B]
                   hover:shadow-md
                   active:scale-[0.98]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
                 "
               >
 

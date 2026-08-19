@@ -16,7 +16,16 @@ export default function LanguageToggle({ compact = false }) {
   );
 
   const handleLanguageChange = () => {
-    persistLanguage(window.localStorage, nextLanguage);
+    let storage;
+    try {
+      storage = window.localStorage;
+    } catch {
+      storage = null;
+    }
+
+    if (storage) {
+      persistLanguage(storage, nextLanguage);
+    }
     i18n.changeLanguage(nextLanguage);
   };
 

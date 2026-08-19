@@ -86,6 +86,7 @@ function Header() {
 
   const userName = user?.name || user?.email?.split("@")[0] || t("common.user");
   const userEmail = user?.email || t("common.noActiveAccount");
+  const userEmailDirection = user?.email ? "ltr" : undefined;
 
   return (
     <header className="w-full border-b border-gray-100 bg-white">
@@ -94,7 +95,7 @@ function Header() {
         <div className="flex items-center gap-2.5">
           <img
             src={logo2}
-            alt="CacheAI Logo"
+            alt={t("auth.logoAlt")}
             className="h-11 w-11 object-contain"
           />
 
@@ -159,7 +160,7 @@ function Header() {
                       <p className="truncate text-[14px] font-semibold text-[#19323A]">
                         {userName}
                       </p>
-                      <p dir="ltr" className="truncate text-[12px] text-[#718087]">
+                      <p dir={userEmailDirection} className="truncate text-[12px] text-[#718087]">
                         {userEmail}
                       </p>
                     </div>

@@ -10,8 +10,16 @@ const browserLanguages =
     ? []
     : [navigator.languages?.[0] || navigator.language];
 
-const storedLanguage =
-  typeof window === "undefined" ? null : readStoredLanguage(window.localStorage);
+let storage = null;
+if (typeof window !== "undefined") {
+  try {
+    storage = window.localStorage;
+  } catch {
+    storage = null;
+  }
+}
+
+const storedLanguage = storage ? readStoredLanguage(storage) : null;
 
 const language = detectLanguage({ storedLanguage, browserLanguages });
 

@@ -19,7 +19,12 @@ export const getFormattingLocale = (language) =>
   normalizeLanguage(language) === "ar" ? "ar-EG" : "en";
 
 export function readStoredLanguage(storage) {
-  try { return normalizeLanguage(storage.getItem(LANGUAGE_STORAGE_KEY)); }
+  try {
+    const storedLanguage = storage.getItem(LANGUAGE_STORAGE_KEY);
+    return storedLanguage === "en" || storedLanguage === "ar"
+      ? storedLanguage
+      : null;
+  }
   catch { return null; }
 }
 

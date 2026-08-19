@@ -158,6 +158,23 @@ test("persists a manually selected language", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
 });
 
+test("starts and toggles language when acquiring localStorage throws", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("storage access blocked");
+      },
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Smart Healthcare, Anytime, Anywhere" })).toBeVisible();
+  await page.getByRole("button", { name: "Switch to Arabic" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.getByRole("heading", { name: "رعاية صحية ذكية، في أي وقت وأي مكان" })).toBeVisible();
+});
+
 test("translates authenticated page families while preserving dynamic content", async ({
   page,
   request,
@@ -202,7 +219,7 @@ test("moves navigation and keeps its border on the content edge", async ({
   expect(arabicBorders.left).not.toBe("0px");
   expect(arabicBorders.right).toBe("0px");
 
-  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await page.getByRole("button", { name: "التبديل إلى الوضع الداكن" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await page.reload();
@@ -233,6 +250,19 @@ test("keeps the header account email LTR in Arabic", async ({ page, request }) =
   );
 });
 
+test("localizes the header logo and does not force the localized account fallback LTR", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("najda-language", "ar"));
+  await page.goto("/");
+
+  await expect(page.getByAltText("شعار نجدة AI")).toBeVisible();
+  await page.getByRole("button", { name: "فتح قائمة المستخدم" }).click();
+  await expect(
+    page.getByRole("paragraph").filter({
+      hasText: "يرجى التسجيل أو تسجيل الدخول لعرض ملفك الشخصي.",
+    })
+  ).not.toHaveAttribute("dir", "ltr");
+});
+
 test("keeps the rendered emergency contact phone LTR in Arabic", async ({
   page,
 }) => {
@@ -247,7 +277,7 @@ test("keeps the rendered emergency contact phone LTR in Arabic", async ({
           emergency_event: {
             id: 742,
             escalation_status: "alert_pending",
-            timer_seconds: 1,
+            timer_seconds: 2,
           },
         }),
       });
@@ -271,6 +301,7 @@ test("keeps the rendered emergency contact phone LTR in Arabic", async ({
 
   await page.goto("/chat?mode=emergency");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByLabel(/متبقي [٠-٩]+ ثانية/)).toHaveText(/^[٠-٩]+$/);
   await expect(page.getByText("01012345678", { exact: true })).toHaveAttribute(
     "dir",
     "ltr"

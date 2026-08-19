@@ -339,8 +339,12 @@ const ar = {
   appearance: {
     switchToArabic: "التبديل إلى العربية",
     switchToEnglish: "التبديل إلى الإنجليزية",
+    switchToLight: "التبديل إلى الوضع الفاتح",
+    switchToDark: "التبديل إلى الوضع الداكن",
     arabic: "عربي",
     english: "EN",
+    light: "فاتح",
+    dark: "داكن",
   },
 };
 

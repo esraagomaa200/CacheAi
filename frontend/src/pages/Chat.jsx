@@ -45,6 +45,10 @@ function formatTime(dateString, language) {
   }).format(date);
 }
 
+function formatNumber(value, language) {
+  return new Intl.NumberFormat(getFormattingLocale(language)).format(value);
+}
+
 function riskBadgeClass(level) {
   if (level === "high" || level === "emergency") {
     return "bg-red-100 text-red-700";
@@ -505,10 +509,16 @@ function Chat() {
               <span
                 className="text-3xl font-bold text-red-600"
                 aria-label={t("chat.countdown", {
-                  count: countdown ?? emergencyEvent.timer_seconds ?? 60,
+                  count: formatNumber(
+                    countdown ?? emergencyEvent.timer_seconds ?? 60,
+                    i18n.language
+                  ),
                 })}
               >
-                {countdown ?? emergencyEvent.timer_seconds ?? 60}
+                {formatNumber(
+                  countdown ?? emergencyEvent.timer_seconds ?? 60,
+                  i18n.language
+                )}
               </span>
 
               <button

@@ -35,6 +35,22 @@ function formatProfileDate(value, language) {
   }).format(date);
 }
 
+const GENDER_KEYS = {
+  male: "profile.gender.male",
+  female: "profile.gender.female",
+  "prefer not to say": "profile.gender.preferNotToSay",
+};
+
+function formatProfileGender(value, t) {
+  const key = typeof value === "string"
+    ? GENDER_KEYS[value.trim().toLowerCase()]
+    : null;
+
+  return key
+    ? { value: t(key), dir: undefined }
+    : { value, dir: "auto" };
+}
+
 function Profile() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -189,6 +205,10 @@ function Profile() {
     profile.dateOfBirth,
     i18n.language
   );
+  const formattedGender = formatProfileGender(profile.gender, t);
+  const formattedConditionCount = new Intl.NumberFormat(
+    getFormattingLocale(i18n.language)
+  ).format(chronicDiseases.length);
 
 
   return (
@@ -430,7 +450,7 @@ function Profile() {
                     </p>
 
                     <p className="mt-0.5 text-[17px] font-semibold text-[#182B3A]">
-                      {chronicDiseases.length}
+                      {formattedConditionCount}
                     </p>
 
                   </div>
@@ -491,7 +511,8 @@ function Profile() {
 
                 <InfoRow
                   label={t("profile.fields.gender")}
-                  value={profile.gender}
+                  value={formattedGender.value}
+                  valueDir={formattedGender.dir}
                   last
                 />
 

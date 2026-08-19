@@ -48,7 +48,7 @@ function SectionHeader({ icon: Icon, title }) {
         {title}
       </h2>
 
-      <div className="h-px bg-gray-200 flex-1 ml-2" />
+      <div className="ms-2 h-px flex-1 bg-gray-200" />
     </div>
   );
 }

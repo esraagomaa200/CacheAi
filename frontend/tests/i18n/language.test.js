@@ -53,3 +53,15 @@ test("storage failures do not break language selection", () => {
   assert.equal(readStoredLanguage(blockedStorage), null);
   assert.equal(persistLanguage(blockedStorage, "ar"), false);
 });
+
+test("stored language accepts only exact supported values", () => {
+  for (const value of ["ar-EG", "EN-us", " ar ", "fr"]) {
+    assert.equal(
+      readStoredLanguage({ getItem: () => value }),
+      null,
+      value
+    );
+  }
+  assert.equal(readStoredLanguage({ getItem: () => "ar" }), "ar");
+  assert.equal(readStoredLanguage({ getItem: () => "en" }), "en");
+});
