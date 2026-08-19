@@ -66,17 +66,7 @@ function EmergencyHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!getAccessToken()) {
-      navigate("/login");
-      return;
-    }
-
-    fetchEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchEvents = async () => {
+  async function fetchEvents() {
     try {
       setLoading(true);
       setError("");
@@ -91,7 +81,17 @@ function EmergencyHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate("/login");
+      return;
+    }
+
+    queueMicrotask(fetchEvents);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ================================================= */
   /* LOADING */

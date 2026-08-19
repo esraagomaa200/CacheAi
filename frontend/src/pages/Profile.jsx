@@ -26,38 +26,38 @@ function Profile() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (!localStorage.getItem("accessToken")) {
+          setError("You are not logged in.");
+          setLoading(false);
+          return;
+        }
+
+        const data = await apiFetch("/profile/me");
+
+        // ------------------------------------------------
+        // Convert backend response to frontend structure
+        // ------------------------------------------------
+
+        const formattedProfile = mapBackendProfileToForm(data);
+
+        setProfile(formattedProfile);
+
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+
+        setError(
+          err.message || "Something went wrong."
+        );
+
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProfile();
   }, []);
-
-  const fetchProfile = async () => {
-    try {
-      if (!localStorage.getItem("accessToken")) {
-        setError("You are not logged in.");
-        setLoading(false);
-        return;
-      }
-
-      const data = await apiFetch("/profile/me");
-
-      // ------------------------------------------------
-      // Convert backend response to frontend structure
-      // ------------------------------------------------
-
-      const formattedProfile = mapBackendProfileToForm(data);
-
-      setProfile(formattedProfile);
-
-    } catch (err) {
-      console.error("Failed to load profile:", err);
-
-      setError(
-        err.message || "Something went wrong."
-      );
-
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   /* ================================================= */

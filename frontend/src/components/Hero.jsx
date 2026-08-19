@@ -27,7 +27,7 @@ function Hero() {
       // Validate that the saved JWT still belongs to a valid backend user.
       await apiFetch("/auth/me");
       navigate("/chat");
-    } catch (error) {
+    } catch {
       // Expired or invalid tokens must not grant access to the chat.
       clearAccessToken();
       navigate("/login");

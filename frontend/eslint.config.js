@@ -18,4 +18,10 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    files: ['playwright.config.js', 'tests-e2e/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
