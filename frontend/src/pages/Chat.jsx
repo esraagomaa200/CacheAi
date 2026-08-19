@@ -88,6 +88,9 @@ function Chat() {
   // (Egyptian TTS via the backend); typed messages stay silent.
   const audioRef = useRef(null);
   const finalTranscriptRef = useRef("");
+  // Auto-send after a natural pause instead of the browser cutting the mic
+  // mid-thought: each new result resets this timer.
+  const silenceTimerRef = useRef(null);
   const bottomRef = useRef(null);
   const emergencyInitDone = useRef(false);
   // Session ids created by our own send flow: the load effect must not refetch
@@ -435,7 +438,9 @@ function Chat() {
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "ar-EG";
     recognition.interimResults = true;
-    recognition.continuous = false;
+    // Keep listening through natural mid-sentence pauses — the browser's
+    // default single-utterance mode cuts the mic "on its own" (user report).
+    recognition.continuous = true;
 
     recognition.onresult = (event) => {
       let transcript = "";
@@ -446,14 +451,27 @@ function Chat() {
 
       setInput(transcript);
       finalTranscriptRef.current = transcript;
+
+      // ~3s of silence after the last heard words = the turn is over → stop,
+      // which fires onend and auto-sends. Each new result resets the clock.
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          /* already stopped */
+        }
+      }, 3000);
     };
 
     recognition.onerror = () => {
+      clearTimeout(silenceTimerRef.current);
       finalTranscriptRef.current = "";
       setListening(false);
     };
 
     recognition.onend = () => {
+      clearTimeout(silenceTimerRef.current);
       setListening(false);
       // Voice conversation: the finished utterance sends itself, and the
       // reply comes back as spoken Egyptian audio + text in the thread.
