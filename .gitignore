@@ -31,5 +31,8 @@ frontend/playwright-report/
 # local git worktrees
 .worktrees/
 
+# local agent scratch reports
+.superpowers/
+
 # TTS voice audition samples (local only)
 voice-samples/
