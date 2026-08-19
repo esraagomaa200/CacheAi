@@ -26,6 +26,16 @@ class PcmCaptureProcessor extends AudioWorkletProcessor {
     super();
     this._buffer = new Float32Array(2048);
     this._offset = 0;
+    // Echo gate: browser AEC does not cover AudioContext playback, so while
+    // نجدة is speaking his own voice leaks mic-ward and the model answers
+    // itself in a loop (observed live). While bot audio plays, quiet frames
+    // are zeroed; loud frames (a real barge-in) pass through.
+    this._botSpeaking = false;
+    this.port.onmessage = (event) => {
+      if (event.data && typeof event.data.botSpeaking === 'boolean') {
+        this._botSpeaking = event.data.botSpeaking;
+      }
+    };
   }
 
   process(inputs) {
@@ -39,11 +49,25 @@ class PcmCaptureProcessor extends AudioWorkletProcessor {
       this._offset += 1;
 
       if (this._offset === this._buffer.length) {
-        const pcm = new Int16Array(this._buffer.length);
-        for (let j = 0; j < pcm.length; j += 1) {
-          const clamped = Math.max(-1, Math.min(1, this._buffer[j]));
-          pcm[j] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+        let gated = false;
+        if (this._botSpeaking) {
+          let sum = 0;
+          for (let j = 0; j < this._buffer.length; j += 1) {
+            sum += this._buffer[j] * this._buffer[j];
+          }
+          const rms = Math.sqrt(sum / this._buffer.length);
+          gated = rms < 0.035;
         }
+
+        const pcm = new Int16Array(this._buffer.length);
+        if (!gated) {
+          for (let j = 0; j < pcm.length; j += 1) {
+            const clamped = Math.max(-1, Math.min(1, this._buffer[j]));
+            pcm[j] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+          }
+        }
+        // Gated frames still ship (as silence): Gemini's VAD needs the
+        // continuous stream to detect turn boundaries.
         this.port.postMessage(pcm.buffer, [pcm.buffer]);
         this._offset = 0;
       }
@@ -111,6 +135,16 @@ function LiveCall({ onClose }) {
   // otherwise نجدة forgets the whole call and starts over (user report).
   const linesRef = useRef([]);
   const needsContextRestoreRef = useRef(false);
+  // Echo-gate plumbing: the worklet needs to know when bot audio is playing.
+  const captureNodeRef = useRef(null);
+
+  const postBotSpeaking = useCallback((value) => {
+    try {
+      captureNodeRef.current?.port.postMessage({ botSpeaking: value });
+    } catch {
+      /* worklet already gone */
+    }
+  }, []);
 
   const stopPlayback = useCallback(() => {
     scheduledRef.current.forEach((source) => {
@@ -122,7 +156,8 @@ function LiveCall({ onClose }) {
     });
     scheduledRef.current.clear();
     nextStartTimeRef.current = 0;
-  }, []);
+    postBotSpeaking(false);
+  }, [postBotSpeaking]);
 
   const teardown = useCallback(() => {
     if (teardownDoneRef.current) {
@@ -229,9 +264,17 @@ function LiveCall({ onClose }) {
     source.start(nextStartTimeRef.current);
     nextStartTimeRef.current += buffer.duration;
 
+    if (scheduledRef.current.size === 0) {
+      postBotSpeaking(true);
+    }
     scheduledRef.current.add(source);
-    source.onended = () => scheduledRef.current.delete(source);
-  }, []);
+    source.onended = () => {
+      scheduledRef.current.delete(source);
+      if (scheduledRef.current.size === 0) {
+        postBotSpeaking(false);
+      }
+    };
+  }, [postBotSpeaking]);
 
   const hangUp = useCallback(() => {
     userEndedRef.current = true;
@@ -305,6 +348,7 @@ function LiveCall({ onClose }) {
         // feeding whichever socket is currently live across reconnects.
         const micSource = micContext.createMediaStreamSource(stream);
         const captureNode = new AudioWorkletNode(micContext, "pcm-capture");
+        captureNodeRef.current = captureNode;
         captureNode.port.onmessage = (event) => {
           const socket = wsRef.current;
           if (socket && socket.readyState === WebSocket.OPEN) {
