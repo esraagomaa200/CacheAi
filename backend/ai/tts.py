@@ -22,8 +22,8 @@ from ai import rag  # reuses env loading + GEMINI_API_KEY handling
 
 LIVE_TTS_MODEL = os.getenv("LIVE_TTS_MODEL", "models/gemini-3.1-flash-live-preview")
 # The voice MUST be pinned explicitly — without it the model picks a random
-# voice per session. Iapetus is the voice Rex ships with.
-LIVE_TTS_VOICE = os.getenv("LIVE_TTS_VOICE", "Iapetus")
+# voice per session. Charon was chosen by ear from a 30-voice audition.
+LIVE_TTS_VOICE = os.getenv("LIVE_TTS_VOICE", "Charon")
 TIMEOUT_SECONDS = 14
 
 SYSTEM = """انت محرك نطق (TTS) مصري — مش محاور.

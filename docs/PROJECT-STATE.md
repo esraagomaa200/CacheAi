@@ -4,6 +4,18 @@
 
 ## 2026-08-19 — سباق ليلة التسليم (المسابقة)
 
+### الصوت — commits `9ba30e3` + `c690508` ✅ (سبوكي جرّب المكالمة: «شغالة جامد»)
+- **محادثة صوتية turn-based**: مايك → ASR ‏ar-EG → إرسال تلقائي → الرد نص + **نطق مصري**
+  (`POST /chat/tts` — Gemini Live API، طلبات بلا حد عكس موديلات TTS ~15/يوم)
+- **مكالمة حية 📞 full-duplex**: WS relay ‏`/chat/live` (JWT، المفتاح مش بيوصل للمتصفح) —
+  صوت لايف بالاتجاهين + نصوص لحظية + مقاطعة شغالة. متبرهن ببروبات صوت حقيقي:
+  سؤال متابعة للعرض الغامض، تصعيد 123 كأول جملة لعلامات FAST
+- **الصوت: Charon** (اختيار سبوكي من audition لـ30 صوت — `voice-samples/voices.html`)،
+  متثبت في `backend/.env` وكـ default في `tts.py`
+- ⚠️ درس مدفوع: كتم المايك client-side يعلّق المكالمة — VAD بتاع Gemini محتاج السكوت يوصله
+- **Codex شغال بالتوازي في worktree منفصل** (`.worktrees/dark-mode` على بورت 5173) —
+  نسختنا الرئيسية للتجربة على بورت **3000**
+
 ### Commit `3ef9ada` — push ✅ — E2E suite كاملة 18/18
 - **Playwright E2E**: 18 اختبار (auth/profile/chat/emergency UI/state-machine API) — كلهم خضر.
   تشغيل مرئي: `E2E_HEADED=1 npx playwright test` من `frontend/`
