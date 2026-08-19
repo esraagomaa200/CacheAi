@@ -13,6 +13,7 @@ import {
   clearAccessToken,
   getAccessToken,
 } from "../lib/api";
+import ThemeToggle from "./ThemeToggle";
 
 function Header() {
   const navigate = useNavigate();
@@ -112,7 +113,7 @@ function Header() {
 
         {/* Right Side */}
         <div className="flex items-center gap-5">
-
+          <ThemeToggle />
 
           {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>

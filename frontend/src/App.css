@@ -1,1 +1,100 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --theme-page: #ffffff;
+  --theme-surface: #ffffff;
+  --theme-surface-elevated: #ffffff;
+  --theme-surface-muted: #f3fbf8;
+  --theme-text: #102832;
+  --theme-text-muted: #64748b;
+  --theme-border: #dce5e3;
+  --theme-input: #ffffff;
+  --theme-accent: #19a878;
+  --theme-accent-soft: #eaf8f4;
+  --theme-danger-soft: #fff0f0;
+  --theme-shadow: 0 10px 30px rgb(11 32 40 / 10%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-page: #091216;
+  --theme-surface: #101c22;
+  --theme-surface-elevated: #16252c;
+  --theme-surface-muted: #132a2a;
+  --theme-text: #e8f1f2;
+  --theme-text-muted: #a8b8bd;
+  --theme-border: #294047;
+  --theme-input: #122128;
+  --theme-accent: #45c99b;
+  --theme-accent-soft: #12362f;
+  --theme-danger-soft: #3a2023;
+  --theme-shadow: 0 14px 36px rgb(0 0 0 / 34%);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html,
+body {
+  background-color: var(--theme-page);
+  color: var(--theme-text);
+}
+
+body {
+  margin: 0;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 9999px;
+  background: var(--theme-surface-elevated);
+  padding: 0.55rem 0.85rem;
+  color: var(--theme-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgb(11 32 40 / 7%);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--theme-accent) 32%, transparent);
+  outline-offset: 2px;
+}
+
+.theme-toggle--compact {
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .theme-toggle {
+    transition: none;
+  }
+}
