@@ -107,6 +107,27 @@ function EmergencyMode() {
           </div>
 
 
+          {/* What Happens Next */}
+          <div className="mt-6 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
+
+            <NextStep
+              number="1"
+              text="Describe your symptoms in the chat, by typing or voice."
+            />
+
+            <NextStep
+              number="2"
+              text="If your symptoms look high-risk, a 60-second safety check starts."
+            />
+
+            <NextStep
+              number="3"
+              text="No response in time notifies your registered emergency contact."
+            />
+
+          </div>
+
+
           {/* Start Emergency Chat */}
           <button
             onClick={() => navigate("/chat?mode=emergency")}
@@ -158,6 +179,23 @@ function EmergencyMode() {
         </div>
 
       </main>
+
+    </div>
+  );
+}
+
+/* Next Step */
+function NextStep({ number, text }) {
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-[#E5EEEB] bg-white px-3.5 py-3">
+
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#EAF8F4] text-[10px] font-bold text-[#19A878]">
+        {number}
+      </span>
+
+      <p className="text-[12px] leading-5 text-[#5B6B71]">
+        {text}
+      </p>
 
     </div>
   );

@@ -5,9 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
-from models import EmergencyContact, Message, PatientProfile, ChatSession, User
+from models import EmergencyContact, EmergencyEvent, Message, PatientProfile, ChatSession, User
 from routers.auth import router as auth_router
 from routers.chat import router as chat_router
+from routers.emergency import router as emergency_router
 from routers.profile import router as profile_router
 
 load_dotenv()
@@ -38,6 +39,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(emergency_router)
 app.include_router(profile_router)
 
 

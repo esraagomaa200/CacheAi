@@ -1,16 +1,61 @@
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import {
   LuPlus,
   LuHistory,
-  LuBookmark,
-  LuBell,
   LuUserRound,
-  LuSettings,
   LuLogOut,
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
+import { clearAccessToken, getAccessToken, listSessions } from "../lib/api";
 
 function SideBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+
+  const activeSessionId = new URLSearchParams(location.search).get("session");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSessions() {
+      if (!getAccessToken()) {
+        if (!cancelled) {
+          setSessions([]);
+          setLoadingSessions(false);
+        }
+        return;
+      }
+
+      try {
+        const data = await listSessions();
+
+        if (!cancelled) {
+          setSessions(data?.sessions || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setSessions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSessions(false);
+        }
+      }
+    }
+
+    loadSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.search]);
+
   return (
     <aside className="flex h-screen w-[270px] flex-col border-r border-gray-100 bg-white px-5 py-6">
 
@@ -29,6 +74,7 @@ function SideBar() {
 
       {/* New Chat */}
       <button
+        onClick={() => navigate("/chat")}
         className="
           mb-5
           flex
@@ -59,29 +105,65 @@ function SideBar() {
       {/* Navigation */}
       <nav className="flex flex-col gap-1">
 
-        <SidebarItem
-          icon={<LuHistory />}
-          label="Chat History"
-        />
+        <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[#8FA0A5]">
+          Chat History
+        </div>
 
-        <SidebarItem
-          icon={<LuBookmark />}
-          label="Saved"
-        />
+        <div className="flex max-h-[220px] flex-col gap-1 overflow-y-auto pr-1">
 
-        <SidebarItem
-          icon={<LuBell />}
-          label="Reminders"
-        />
+          {loadingSessions && (
+            <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
+              Loading...
+            </p>
+          )}
+
+          {!loadingSessions && sessions.length === 0 && (
+            <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
+              No chats yet
+            </p>
+          )}
+
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              onClick={() => navigate(`/chat?session=${session.id}`)}
+              className={`
+                flex
+                w-full
+                items-center
+                gap-3
+                truncate
+                rounded-lg
+                px-3
+                py-2.5
+                text-left
+                text-[13px]
+                transition-all
+                duration-200
+                ${
+                  String(session.id) === activeSessionId
+                    ? "bg-[#EAF8F4] text-[#167E68]"
+                    : "text-[#455960] hover:bg-[#F2FAF7] hover:text-[#167E68]"
+                }
+              `}
+            >
+              <LuHistory
+                size={16}
+                className="shrink-0"
+              />
+
+              <span className="truncate">
+                {session.title || "New Chat"}
+              </span>
+            </button>
+          ))}
+
+        </div>
 
         <SidebarItem
           icon={<LuUserRound />}
           label="Profile"
-        />
-
-        <SidebarItem
-          icon={<LuSettings />}
-          label="Settings"
+          onClick={() => navigate("/profile")}
         />
 
       </nav>
@@ -91,6 +173,10 @@ function SideBar() {
 
         {/* Logout */}
         <button
+          onClick={() => {
+            clearAccessToken();
+            navigate("/login");
+          }}
           className="
             mb-7
             flex
@@ -145,9 +231,10 @@ function SideBar() {
 
 
 /* Sidebar Item */
-function SidebarItem({ icon, label }) {
+function SidebarItem({ icon, label, onClick }) {
   return (
     <button
+      onClick={onClick}
       className="
         flex
         w-full

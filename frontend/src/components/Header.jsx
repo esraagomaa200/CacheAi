@@ -5,7 +5,7 @@ import {
   Settings,
   UserRound,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import logo2 from "../assets/icons/Logo2.png";
 import {
@@ -102,33 +102,12 @@ function Header() {
 
         {/* Navigation */}
         <nav className="hidden items-center gap-9 md:flex">
-          <a
-            href="#home"
+          <Link
+            to="/"
             className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
           >
             Home
-          </a>
-
-          <a
-            href="#how-it-works"
-            className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
-          >
-            How It Works
-          </a>
-
-          <a
-            href="#about"
-            className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
-          >
-            About Us
-          </a>
-
-          <a
-            href="#contact"
-            className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
-          >
-            Contact
-          </a>
+          </Link>
         </nav>
 
         {/* Right Side */}

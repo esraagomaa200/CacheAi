@@ -74,6 +74,44 @@ export async function apiFetch(path, options = {}) {
   return data;
 }
 
+export function createSession(chatType = "normal") {
+  return apiFetch("/chat/sessions", {
+    method: "POST",
+    body: JSON.stringify({ title: null, chat_type: chatType }),
+  });
+}
+
+export function listSessions() {
+  return apiFetch("/chat/sessions");
+}
+
+export function getMessages(sessionId) {
+  return apiFetch(`/chat/sessions/${sessionId}/messages`);
+}
+
+export function sendMessage(sessionId, content) {
+  return apiFetch(`/chat/sessions/${sessionId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export function respondEvent(eventId) {
+  return apiFetch(`/emergency/events/${eventId}/respond`, {
+    method: "POST",
+  });
+}
+
+export function escalateEvent(eventId) {
+  return apiFetch(`/emergency/events/${eventId}/escalate`, {
+    method: "POST",
+  });
+}
+
+export function listEmergencyEvents() {
+  return apiFetch("/emergency/events");
+}
+
 export function mapBackendProfileToForm(data) {
   return {
     fullName: data.user?.name || "",

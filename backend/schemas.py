@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -49,3 +50,12 @@ class ProfileUpdateRequest(BaseModel):
     emergency_phone: str | None = None
     emergency_email: EmailStr | None = None
     emergency_contact: EmergencyContactUpdate | None = None
+
+
+class ChatSessionCreateRequest(BaseModel):
+    title: str | None = None
+    chat_type: Literal["normal", "emergency"] = "normal"
+
+
+class SendMessageRequest(BaseModel):
+    content: str = Field(min_length=1)

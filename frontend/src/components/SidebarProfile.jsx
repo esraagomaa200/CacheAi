@@ -3,11 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   LuHouse,
   LuMessageSquare,
-  LuClipboardList,
-  LuCalendarDays,
-  LuPill,
   LuUserRound,
-  LuSettings,
   LuShieldAlert,
   LuLogOut,
   LuChevronRight,
@@ -30,29 +26,9 @@ function SidebarProfile() {
       icon: LuMessageSquare,
     },
     {
-      name: "Health Records",
-      path: "/health-records",
-      icon: LuClipboardList,
-    },
-    {
-      name: "Appointments",
-      path: "/appointments",
-      icon: LuCalendarDays,
-    },
-    {
-      name: "Medications",
-      path: "/medications",
-      icon: LuPill,
-    },
-    {
       name: "Profile",
       path: "/profile",
       icon: LuUserRound,
-    },
-    {
-      name: "Settings",
-      path: "/settings",
-      icon: LuSettings,
     },
   ];
 

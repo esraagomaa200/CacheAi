@@ -4,6 +4,8 @@ It only adds missing columns and backfills safe defaults. It never drops tables,
 columns, or rows. Run it once before starting Uvicorn after replacing the files.
 """
 
+import re
+
 from sqlalchemy import inspect, text
 
 from database import engine
@@ -36,6 +38,8 @@ COLUMN_DEFINITIONS = {
     },
     "messages": {
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "sources": "{json_type}",
+        "risk_level": "VARCHAR(20)",
     },
 }
 
@@ -52,6 +56,16 @@ BACKFILL_STATEMENTS = (
     ("chat_sessions", "updated_at", "CURRENT_TIMESTAMP"),
     ("messages", "created_at", "CURRENT_TIMESTAMP"),
 )
+
+
+# SQLite refuses ALTER TABLE ... ADD COLUMN with a non-constant default
+# (e.g. DEFAULT CURRENT_TIMESTAMP) once the table already has rows — every
+# real existing DB we're migrating. Every column definition below that
+# carries a DEFAULT already has a matching entry in BACKFILL_STATEMENTS, and
+# the ORM sets these values in Python on every future insert anyway, so the
+# DB-level DEFAULT clause isn't needed for correctness. Strip it before
+# issuing the ALTER so this stays safe on both SQLite and PostgreSQL.
+_DEFAULT_CLAUSE_RE = re.compile(r"\s+DEFAULT\s+.+$", re.IGNORECASE)
 
 
 def migrate() -> None:
@@ -71,10 +85,11 @@ def migrate() -> None:
                 if column_name in existing_columns:
                     continue
                 definition = definition.format(json_type=json_type)
+                column_def = _DEFAULT_CLAUSE_RE.sub("", definition).strip()
                 connection.execute(
                     text(
                         f'ALTER TABLE "{table_name}" '
-                        f'ADD COLUMN "{column_name}" {definition}'
+                        f'ADD COLUMN "{column_name}" {column_def}'
                     )
                 )
                 print(f"Added {table_name}.{column_name}")

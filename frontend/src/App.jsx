@@ -4,6 +4,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 import Home from "./pages/Home";
@@ -15,6 +16,7 @@ import MainLayout from "./layout/MainLayout";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import EmergencyAuth from "./pages/EmergencyAuth";
+import Login from "./pages/Login";
 
 function App() {
   return (
@@ -27,6 +29,7 @@ function App() {
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
 
@@ -34,6 +37,8 @@ function App() {
         <Route path="/emergency-auth" element={<EmergencyAuth />} />
 
         <Route path="/emergency" element={<EmergencyMode />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
     </BrowserRouter>

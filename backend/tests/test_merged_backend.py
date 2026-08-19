@@ -2,7 +2,9 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_najda.db"
 os.environ["SECRET_KEY"] = "test-secret"
-os.environ.pop("GOOGLE_CLIENT_ID", None)
+# Set to empty (not pop): load_dotenv() during app imports won't override an
+# existing env var, so this reliably simulates missing Google config.
+os.environ["GOOGLE_CLIENT_ID"] = ""
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

@@ -9,6 +9,9 @@ python-jose[cryptography]
 python-multipart
 email-validator
 google-auth
+google-genai
+qdrant-client
+pyyaml
 requests
 pytest
 httpx

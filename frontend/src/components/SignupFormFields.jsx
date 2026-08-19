@@ -19,7 +19,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   API_BASE_URL,
   formatApiError,
@@ -722,12 +722,12 @@ const handleSubmit = async (e) => {
 
         Already have an account?{" "}
 
-        <a
-          href="#"
+        <Link
+          to="/login"
           className="text-emerald-600 hover:underline font-medium"
         >
           Sign in
-        </a>
+        </Link>
 
       </p>
 
