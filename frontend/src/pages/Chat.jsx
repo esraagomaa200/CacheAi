@@ -11,6 +11,7 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
+import LiveCall from "../components/LiveCall";
 import SideBar from "../components/SideBar";
 import {
   getAccessToken,
@@ -79,6 +80,9 @@ function Chat() {
 
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  // Full-duplex live voice call — an overlay, fully independent of the
+  // typed/dictated message flow below.
+  const [showLiveCall, setShowLiveCall] = useState(false);
   const recognitionRef = useRef(null);
   // Voice conversation: replies to voice-initiated messages are spoken aloud
   // (Egyptian TTS via the backend); typed messages stay silent.
@@ -526,10 +530,23 @@ function Chat() {
             {isEmergencyMode ? "محادثة الطوارئ" : sessionId ? "Chat" : "New Chat"}
           </h1>
 
-          <button className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50">
-            <LuEllipsis size={22} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowLiveCall(true)}
+              title="مكالمة صوتية"
+              className="rounded-full p-2 text-[19px] leading-none transition hover:bg-gray-50"
+            >
+              📞
+            </button>
+
+            <button className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50">
+              <LuEllipsis size={22} />
+            </button>
+          </div>
         </header>
+
+        {showLiveCall && <LiveCall onClose={() => setShowLiveCall(false)} />}
 
         {/* Countdown / Escalated card */}
         {isEmergencyMode &&
