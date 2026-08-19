@@ -1,10 +1,22 @@
 from datetime import datetime, date
 
-from sqlalchemy import String, Text, DateTime, Date, ForeignKey
+from sqlalchemy import Date, DateTime, ForeignKey, JSON, String, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
+
+
+class PortableJSON(TypeDecorator):
+    """Use JSONB on PostgreSQL and JSON on SQLite/local test databases."""
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB())
+        return dialect.type_descriptor(JSON())
 
 
 # =========================================================
@@ -103,8 +115,9 @@ class PatientProfile(Base):
     )
 
     chronic_conditions: Mapped[list[str] | None] = mapped_column(
-        JSONB,
+                PortableJSON(),
         nullable=True
+
     )
 
     created_at: Mapped[datetime] = mapped_column(
