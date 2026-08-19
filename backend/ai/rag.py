@@ -9,8 +9,16 @@ import os
 import threading
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
 QDRANT_PATH = BASE_DIR / "qdrant_data"
+
+# Entry points like `python -m ai.ingest` import this module without going
+# through main.py/database.py, so the env files must be loaded here too
+# (override=False keeps already-set process vars authoritative).
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
 
 COLLECTION_NAME = "medical_docs"
 VECTOR_SIZE = 768

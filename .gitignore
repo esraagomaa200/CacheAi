@@ -1,16 +1,25 @@
-# secrets
-backend/.env
+# secrets — NEVER commit env files
 .env
+backend/.env
+*.env
 
 # python
 __pycache__/
 *.pyc
 backend/.venv/
 backend/venv/
+.venv/
+venv/
+
+# vector stores / local data artifacts
 backend/qdrant_data/
-backend/cacheai.db
+data/qdrant_local/
+*.pkl
+
+# databases
+backend/*.db
+*.db
 
 # node
 node_modules/
 frontend/dist/
-backend/*.db

@@ -571,17 +571,26 @@ function Chat() {
 
                     {Array.isArray(msg.sources) && msg.sources.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
-                        {msg.sources.map((src, i) => (
-                          <a
-                            key={`${msg.id}-src-${i}`}
-                            href={src.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="rounded-full border border-gray-100 bg-[#F5FAF9] px-3 py-1 text-[11px] text-[#40545B] transition hover:border-[#A9DFD0] hover:bg-[#F2FBF8]"
-                          >
-                            📚 {src.org} — {src.title}
-                          </a>
-                        ))}
+                        {msg.sources.map((src, i) =>
+                          src.url ? (
+                            <a
+                              key={`${msg.id}-src-${i}`}
+                              href={src.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-full border border-gray-100 bg-[#F5FAF9] px-3 py-1 text-[11px] text-[#40545B] transition hover:border-[#A9DFD0] hover:bg-[#F2FBF8]"
+                            >
+                              📚 {src.org} — {src.title}
+                            </a>
+                          ) : (
+                            <span
+                              key={`${msg.id}-src-${i}`}
+                              className="rounded-full border border-gray-100 bg-[#F5FAF9] px-3 py-1 text-[11px] text-[#40545B]"
+                            >
+                              📚 {src.org} — {src.title}
+                            </span>
+                          )
+                        )}
                       </div>
                     )}
                   </div>
