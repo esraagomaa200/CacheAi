@@ -63,4 +63,34 @@ test.describe("profile", () => {
       timeout: 15000,
     });
   });
+
+  test("edit profile keeps authenticated load failures on-page with a safe error", async ({
+    page,
+    request,
+  }) => {
+    const user = await registerUser(request);
+    await seedAuth(page, user.token);
+    const backendDetail = "operator-only profile detail";
+
+    await page.route("**/profile/me", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: backendDetail }),
+      });
+    });
+
+    await page.goto("/edit-profile");
+
+    await expect(page).toHaveURL(/\/edit-profile$/);
+    await expect(
+      page.getByText("Something went wrong. Please try again.", { exact: true })
+    ).toBeVisible();
+    await expect(page.getByText(backendDetail, { exact: true })).toHaveCount(0);
+  });
 });

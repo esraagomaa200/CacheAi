@@ -101,7 +101,7 @@ export async function loginViaApi(page, request, overrides = {}) {
  */
 export async function waitForChatReady(page) {
   await expect(
-    page.getByText("ابدأ المحادثة الآن")
+    page.getByText("Start the conversation now")
   ).toBeVisible({ timeout: 15000 });
 }
 

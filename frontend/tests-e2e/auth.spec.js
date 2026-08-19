@@ -66,7 +66,7 @@ test.describe("auth", () => {
 
     await page.goto("/chat");
     await expect(
-      page.getByPlaceholder("اكتب رسالتك...")
+      page.getByPlaceholder("Type your message...")
     ).toBeVisible({ timeout: 15000 });
 
     await page.getByRole("button", { name: "Logout" }).click();

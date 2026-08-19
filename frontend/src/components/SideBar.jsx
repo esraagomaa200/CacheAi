@@ -20,6 +20,7 @@ function SideBar() {
 
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionsError, setSessionsError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
 
   // Chat.jsx fires this after a send completes (the server titles the session
@@ -39,9 +40,15 @@ function SideBar() {
       if (!getAccessToken()) {
         if (!cancelled) {
           setSessions([]);
+          setSessionsError("");
           setLoadingSessions(false);
         }
         return;
+      }
+
+      if (!cancelled) {
+        setLoadingSessions(true);
+        setSessionsError("");
       }
 
       try {
@@ -54,6 +61,7 @@ function SideBar() {
         console.error("Failed to load chat sessions:", error);
         if (!cancelled) {
           setSessions([]);
+          setSessionsError("errors.generic");
         }
       } finally {
         if (!cancelled) {
@@ -132,7 +140,13 @@ function SideBar() {
             </p>
           )}
 
-          {!loadingSessions && sessions.length === 0 && (
+          {!loadingSessions && sessionsError && (
+            <p className="px-3 py-2 text-[12px] text-red-600">
+              {t(sessionsError)}
+            </p>
+          )}
+
+          {!loadingSessions && !sessionsError && sessions.length === 0 && (
             <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
               {t("navigation.emptyHistory")}
             </p>

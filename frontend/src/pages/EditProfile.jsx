@@ -255,7 +255,9 @@ function EditProfile() {
         setChronicDiseases(profile.chronicDiseases);
       } catch (loadError) {
         console.error("Failed to load profile:", loadError);
-        navigate("/profile");
+        setError(
+          getApiErrorKey(loadError instanceof Error ? loadError.message : "")
+        );
       }
     };
 

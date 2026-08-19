@@ -20,7 +20,7 @@ test.describe("emergency", () => {
 
     await page.goto("/chat?mode=emergency");
 
-    await expect(page.getByText("وضع الطوارئ")).toBeVisible({
+    await expect(page.getByRole("heading", { name: "Emergency Chat" })).toBeVisible({
       timeout: 15000,
     });
 
@@ -52,7 +52,7 @@ test.describe("emergency", () => {
 
     await page.goto("/chat?mode=emergency");
 
-    const input = page.getByPlaceholder("اكتب رسالتك...");
+    const input = page.getByPlaceholder("Type your message...");
     await expect(input).toBeVisible({ timeout: 15000 });
 
     // See waitForChatReady() jsdoc: startEmergencySession() is still
@@ -66,7 +66,7 @@ test.describe("emergency", () => {
     await input.fill(redFlagMessage);
     await input.press("Enter");
 
-    const imOkButton = page.getByRole("button", { name: "أنا بخير ✅" });
+    const imOkButton = page.getByRole("button", { name: "I'm OK ✅" });
 
     // The emergency_event (if the AI scored the message high/emergency risk)
     // is applied in the very same state update as the assistant reply, so
@@ -117,7 +117,7 @@ test.describe("emergency", () => {
     }
   });
 
-  test("emergency history lists the created event with an Arabic status", async ({
+  test("emergency history lists the created event with an English status", async ({
     page,
     request,
   }) => {
@@ -125,17 +125,17 @@ test.describe("emergency", () => {
 
     // Create at least one emergency event server-side via the UI flow.
     await page.goto("/chat?mode=emergency");
-    await expect(page.getByText("وضع الطوارئ")).toBeVisible({
+    await expect(page.getByRole("heading", { name: "Emergency Chat" })).toBeVisible({
       timeout: 15000,
     });
 
     await page.goto("/emergency-history");
 
     const knownStatusLabels = [
-      "تحت المراقبة",
-      "في انتظار الرد",
-      "تم الاطمئنان",
-      "تم إبلاغ جهة الاتصال",
+      "Monitoring",
+      "Awaiting response",
+      "Confirmed safe",
+      "Emergency contact notified",
     ];
 
     const statusRegex = new RegExp(knownStatusLabels.join("|"));

@@ -19,7 +19,7 @@ test.describe("chat", () => {
 
     await page.goto("/chat");
 
-    const input = page.getByPlaceholder("اكتب رسالتك...");
+    const input = page.getByPlaceholder("Type your message...");
     await expect(input).toBeVisible({ timeout: 15000 });
     await waitForChatReady(page);
 
@@ -50,7 +50,7 @@ test.describe("chat", () => {
 
     await page.goto("/chat");
 
-    const input = page.getByPlaceholder("اكتب رسالتك...");
+    const input = page.getByPlaceholder("Type your message...");
     await expect(input).toBeVisible({ timeout: 15000 });
 
     // The "New Chat" button (create a new chat) is rendered before the
@@ -106,7 +106,7 @@ test.describe("chat", () => {
 
     await page.goto("/chat");
 
-    const input = page.getByPlaceholder("اكتب رسالتك...");
+    const input = page.getByPlaceholder("Type your message...");
     await expect(input).toBeVisible({ timeout: 15000 });
     await waitForChatReady(page);
 
@@ -124,5 +124,36 @@ test.describe("chat", () => {
 
     await expect(bubbleLocator(page)).toHaveCount(0, { timeout: 10000 });
     await expect(page).toHaveURL(/\/chat$/);
+  });
+
+  test("sidebar shows a safe error instead of empty history when sessions fail", async ({
+    page,
+    request,
+  }) => {
+    await loginViaApi(page, request);
+    const backendDetail = "database host leaked";
+
+    await page.route("**/chat/sessions", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: backendDetail }),
+      });
+    });
+
+    await page.goto("/chat");
+
+    await expect(
+      page.getByText("Something went wrong. Please try again.", { exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByText("No chats yet", { exact: true })
+    ).toHaveCount(0);
+    await expect(page.getByText(backendDetail, { exact: true })).toHaveCount(0);
   });
 });
