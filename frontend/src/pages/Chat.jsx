@@ -531,7 +531,7 @@ function Chat() {
                   {t("chat.notifyingContact")} {" "}
                   <span dir="auto">{contact.name}</span>
                   {" — "}
-                  <span dir="auto">{contact.phone}</span>
+                  <span dir="ltr">{contact.phone}</span>
                 </>
               ) : (
                 t("chat.notifyingNoContact")

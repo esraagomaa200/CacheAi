@@ -219,3 +219,60 @@ test("moves navigation and keeps its border on the content edge", async ({
   expect(englishBorders.left).toBe("0px");
   expect(englishBorders.right).not.toBe("0px");
 });
+
+test("keeps the header account email LTR in Arabic", async ({ page, request }) => {
+  const user = await registerUser(request, { name: "RTL Header User" });
+  await seedAuth(page, user.token);
+  await page.addInitScript(() => localStorage.setItem("najda-language", "ar"));
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "فتح قائمة المستخدم" }).click();
+  await expect(page.getByText(user.email, { exact: true })).toHaveAttribute(
+    "dir",
+    "ltr"
+  );
+});
+
+test("keeps the rendered emergency contact phone LTR in Arabic", async ({
+  page,
+}) => {
+  await seedAuth(page, "rtl-contact-token");
+  await page.addInitScript(() => localStorage.setItem("najda-language", "ar"));
+  await page.route("**/chat/sessions", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          session: { id: 741, title: "Emergency", chat_type: "emergency" },
+          emergency_event: {
+            id: 742,
+            escalation_status: "alert_pending",
+            timer_seconds: 1,
+          },
+        }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ sessions: [] }),
+    });
+  });
+  await page.route("**/emergency/events/742/escalate", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        event: { id: 742, escalation_status: "escalated" },
+        emergency_contact: { name: "Emergency Contact", phone: "01012345678" },
+      }),
+    });
+  });
+
+  await page.goto("/chat?mode=emergency");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByText("01012345678", { exact: true })).toHaveAttribute(
+    "dir",
+    "ltr"
+  );
+});

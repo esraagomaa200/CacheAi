@@ -159,7 +159,7 @@ function Header() {
                       <p className="truncate text-[14px] font-semibold text-[#19323A]">
                         {userName}
                       </p>
-                      <p className="truncate text-[12px] text-[#718087]">
+                      <p dir="ltr" className="truncate text-[12px] text-[#718087]">
                         {userEmail}
                       </p>
                     </div>
