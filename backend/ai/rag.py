@@ -100,20 +100,20 @@ def ensure_collection(recreate: bool = False) -> None:
         )
 
 
-def upsert_chunks(chunks: list[dict]) -> int:
-    """Embed and upsert corpus chunks.
+def write_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
+    """Write pre-embedded corpus chunks as points into the collection.
 
-    Each chunk dict needs: title, org, url, condition, text. Returns the
-    number of points written. Point ids are freshly assigned 0..N-1, so this
-    is meant to be called once per full ingest run right after
-    ensure_collection(recreate=True).
+    Each chunk dict needs: title, org, url, condition, text; vectors must be
+    the same length as chunks (one embedding per chunk, already computed via
+    embed_documents()). Returns the number of points written. Point ids are
+    freshly assigned 0..N-1, so this is meant to be called once per full
+    ingest run right after ensure_collection(recreate=True).
     """
     if not chunks:
         return 0
 
     from qdrant_client.models import PointStruct
 
-    vectors = embed_documents([chunk["text"] for chunk in chunks])
     client = get_qdrant_client()
     points = [
         PointStruct(

@@ -108,9 +108,18 @@ function Chat() {
     let cancelled = false;
 
     async function loadSession(id) {
+      // Loading any session from the server transfers ownership away from the
+      // send flow — otherwise navigating back to a self-created session would
+      // hit the guard above and show another session's stale messages.
+      selfCreatedSession.current = null;
       setSessionId(id);
       setInitializing(true);
       setError("");
+      // Leaving a live emergency session must kill its event state, or the
+      // hidden countdown keeps running and can escalate the old event while
+      // the user is viewing another chat.
+      setEmergencyEvent(null);
+      setContact(null);
 
       try {
         const data = await getMessages(id);
@@ -222,11 +231,22 @@ function Chat() {
         data?.event || { ...emergencyEvent, escalation_status: "escalated" }
       );
       setContact(data?.emergency_contact || null);
+      setCountdown(null);
     } catch (err) {
-      setError(err.message || "تعذر تصعيد حالة الطوارئ.");
+      const message = err.message || "";
+      if (message.includes("already")) {
+        // 409: the event reached a terminal state elsewhere (another tab,
+        // an earlier successful call) — adopt it and stop retrying.
+        setEmergencyEvent({ ...emergencyEvent, escalation_status: "escalated" });
+        setCountdown(null);
+      } else {
+        // Escalation is safety-critical: keep the event alert_pending and
+        // auto-retry in 5s instead of silently freezing the countdown.
+        setError(message || "تعذر تصعيد حالة الطوارئ — بنحاول تاني.");
+        setCountdown(5);
+      }
     } finally {
       setEscalating(false);
-      setCountdown(null);
     }
   }
 

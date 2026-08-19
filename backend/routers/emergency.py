@@ -59,6 +59,12 @@ def respond_to_event(
 ):
     event = _get_owned_event(event_id, db, current_user)
 
+    if event.escalation_status not in ("monitoring", "alert_pending"):
+        raise HTTPException(
+            status_code=409,
+            detail="Event already " + event.escalation_status
+        )
+
     now = datetime.utcnow()
     event.responded_at = now
     event.escalation_status = "resolved"
@@ -81,6 +87,12 @@ def escalate_event(
     current_user: User = Depends(get_current_user)
 ):
     event = _get_owned_event(event_id, db, current_user)
+
+    if event.escalation_status != "alert_pending":
+        raise HTTPException(
+            status_code=409,
+            detail="Event already " + event.escalation_status
+        )
 
     event.escalation_status = "escalated"
 

@@ -256,7 +256,11 @@ def send_message(
     event = None
     if session.chat_type == "emergency":
         event = _latest_event(session.id, db)
-        if event is not None and result["risk_level"] in ALERT_RISK_LEVELS:
+        if (
+            event is not None
+            and result["risk_level"] in ALERT_RISK_LEVELS
+            and event.escalation_status in ("monitoring", "alert_pending")
+        ):
             event.risk_level = result["risk_level"]
             event.condition = result["condition"]
             event.escalation_status = "alert_pending"

@@ -16,6 +16,7 @@ import MainLayout from "./layout/MainLayout";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import EmergencyAuth from "./pages/EmergencyAuth";
+import EmergencyHistory from "./pages/EmergencyHistory";
 import Login from "./pages/Login";
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path="/emergency-auth" element={<EmergencyAuth />} />
 
         <Route path="/emergency" element={<EmergencyMode />} />
+        <Route path="/emergency-history" element={<EmergencyHistory />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
 

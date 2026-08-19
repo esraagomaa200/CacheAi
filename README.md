@@ -1,529 +1,249 @@
-# CacheAi
-An AI-powered medical chatbot that helps users understand their symptoms through natural language and voice interaction, with support for Egyptian Arabic and intelligent medical information retrieval.
+# NajdaAI
 
-أيوه، دلوقتي نقدر **نثبت الـ scope** ونبدأ Backend + Database من غير ما نرجع نغيّر الـ schema كل شوية.
+**AI-powered medical triage assistant for stroke, chest/heart, and breathing emergencies — with Egyptian Arabic conversation, source-cited answers, and a simulated emergency escalation flow.**
 
-بما إن المشروع مركز على **Stroke + Chest/Heart symptoms + Breathing problems**، فأنا أنصحكم تعملوا الـ MVP بالشكل ده:
+> Engineering codename: `CacheAi`. The product name shown throughout the UI is **NajdaAI** ("نجدة" — Arabic for "help/rescue").
 
-## 1. الـ Features الأساسية — دي لازم تتعمل
-
-### 👤 Authentication
-
-* Sign up / Login   done
-* Google Login      done
-* JWT/session       done
-* Patient profile   done 
-* Emergency contact  done
-
-### 🤖 AI Medical Chat
-
-* Chat عادي
-* Chat history
-* الـ AI يستخدم الـ RAG بتاعكم
-* Qdrant للـ medical knowledge
-* الـ Agent يقرر إمتى يستخدم retrieval / tools
-* **Source citations** مع إجابة الـ AI
-
-مثلاً:
-
-> Possible causes...
-> **Sources:** WHO guideline, STEMI guideline...
-
-وده Feature مهم جدًا في مشروع طبي.
+NajdaAI helps a user describe symptoms in plain Egyptian Arabic (or English), get a cautious, source-grounded triage response, and — if the situation looks dangerous — walk through a timed emergency flow that would notify their emergency contact. It focuses deliberately on three time-critical conditions where fast recognition saves lives: **stroke**, **chest / heart symptoms**, and **breathing problems**.
 
 ---
 
-### 🚨 Emergency Chat
+## Table of contents
 
-ده يبقى Mode مختلف:
-
-```text
-Normal Chat
-      │
-      └── Emergency Chat
-              │
-              ├── Timer
-              ├── Symptoms
-              ├── Risk assessment
-              ├── Emergency contact
-              └── Escalation
-```
-
-والـ Emergency Chat **يتطلب Authentication** زي ما قلتي.
-
-مهم: في المشروع نقدر نعمل **escalation workflow**، لكن ما نعتمدش على إن النظام يتصل بالإسعاف تلقائيًا في الواقع بدون integration/سياسة واضحة وموافقة المستخدم.
+- [Focus conditions](#focus-conditions)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Medical knowledge base & citations](#medical-knowledge-base--citations)
+- [Safety](#safety)
+- [Getting started](#getting-started)
+- [Testing](#testing)
+- [Project structure](#project-structure)
 
 ---
 
-### 🔔 Smart Notifications
+## Focus conditions
 
-دي من أقوى الـ features عندكم.
-
-مثلاً:
-
-```text
-Patient condition:
-Stroke risk
-
-       ↓
-
-Scheduled reminder
-
-       ↓
-
-Patient doesn't respond
-
-       ↓
-
-Escalation
-
-       ↓
-
-Emergency contact
-```
-
-والـ notification تكون حسب condition.
+| Condition | Why it's time-critical |
+|---|---|
+| 🧠 **Stroke** | FAST warning signs (Face, Arms, Speech, Time) — treatment window is minutes to hours. |
+| ❤️ **Chest / heart symptoms** | Heart attack signs are often dismissed or misread; early ambulance contact changes outcomes. |
+| 🫁 **Breathing problems** | Severe shortness of breath, asthma attacks, and choking can escalate within minutes. |
 
 ---
 
-### 🩺 Disease-specific support
+## Features
 
-بدل ما الـ AI يكون Medical Chatbot عام فقط:
+All items below are implemented and working end-to-end in this build.
 
-```text
-Stroke
-Chest / Heart
-Breathing
-```
+**Authentication & profile**
+- Email/password sign-up and login (JWT access tokens)
+- Google Sign-In (Google Identity Services, verified server-side)
+- Patient profile: date of birth, gender, blood type, chronic conditions
+- Emergency contact management (name, phone, email)
 
-كل واحدة لها:
+**AI medical chat**
+- Free-form chat in Egyptian Arabic by default; mirrors the user's language if they write in English
+- Retrieval-Augmented Generation (RAG) over a curated medical corpus — the model grounds its answers in retrieved passages instead of relying purely on parametric knowledge
+- Every assistant answer that used retrieved material shows clickable **source citation chips** (organization + document title, linking to the original source)
+- Persistent chat history — sessions are saved and can be reopened from the sidebar
+- Risk level is computed for every assistant turn (`low` / `moderate` / `high` / `emergency`)
 
-* symptoms
-* risk indicators
-* reminders
-* emergency flow
-* relevant medical documents
-* sources
+**Voice input**
+- Microphone button using the Web Speech API, configured for Egyptian Arabic (`ar-EG`), with live interim transcription into the message box
+- Automatically hidden on browsers that don't support the API
 
-وده هيخلي المشروع واضح جدًا في الـ demo.
-
----
-
-# 2. Features أنصح تضيفوها لأنها ترفع قيمة المشروع
-
-### ⭐ A. Patient Medical Profile
-
-خلو المستخدم يسجل:
-
-```text
-Blood type
-Chronic conditions
-Medications
-Allergies
-Emergency contact
-```
-
-**الأدوية والحساسيات بالذات مهمين** لو الـ AI هيستخدم patient context.
+**Emergency mode**
+- Dedicated emergency chat mode with a persistent risk-level banner
+- When the AI assesses `high` or `emergency` risk, a **60-second countdown** appears with an "أنا بخير ✅" ("I'm OK") button
+- If the user confirms they're OK, the event is marked resolved
+- If the countdown reaches zero, the flow **escalates**: the UI shows a card announcing that the user's registered emergency contact is being notified (see [Safety](#safety) — this notification is simulated)
+- Full **emergency event history**: every emergency session is logged with its condition, risk level, timer, response time, and final status
 
 ---
 
-### ⭐ B. Symptom Assessment
+## Architecture
 
-قبل الـ AI أو داخل Emergency Mode:
-
-```text
-What are you experiencing?
-
-Chest pain
-Difficulty breathing
-Weakness
-Speech difficulty
-Dizziness
-...
+```
+                         ┌───────────────────────┐
+                         │        Browser         │
+                         │  React + Vite + Tailwind│
+                         └───────────┬────────────┘
+                                     │ REST / JSON (JWT bearer)
+                                     ▼
+                         ┌───────────────────────┐
+                         │        FastAPI          │
+                         │  auth · profile · chat  │
+                         │      · emergency         │
+                         └───────┬───────┬─────────┘
+                                 │       │
+                 ┌───────────────┘       └───────────────┐
+                 ▼                                        ▼
+      ┌─────────────────────┐                  ┌───────────────────────┐
+      │      PostgreSQL       │                  │     Gemini Agent       │
+      │   (Neon, or SQLite    │                  │  gemini-2.5-flash       │
+      │    fallback locally)  │                  │  single structured-JSON │
+      │                        │                  │  call: answer + risk +  │
+      │  users, profiles,      │                  │  condition + citations  │
+      │  chat sessions,        │                  └───────────┬────────────┘
+      │  messages, emergency   │                              │
+      │  events                │                              ▼
+      └─────────────────────┘                  ┌───────────────────────┐
+                                                 │        Qdrant           │
+                                                 │  local embedded mode    │
+                                                 │  medical_docs collection │
+                                                 │  768-dim cosine vectors  │
+                                                 │  (gemini-embedding-001) │
+                                                 └───────────────────────┘
 ```
 
-وبناءً عليها النظام يعمل **risk classification**:
-
-```text
-LOW
-MODERATE
-HIGH / EMERGENCY
-```
-
-مش تشخيص طبي، وإنما triage/risk escalation.
+Request flow for a chat message: the frontend calls `POST /chat/sessions/{id}/messages` → the backend loads the patient profile and recent history from PostgreSQL → retrieves the top-k relevant chunks from Qdrant → sends one structured-JSON request to Gemini with the profile, history, and retrieved sources → stores the assistant reply (with its risk level and cited sources) back to PostgreSQL → returns it to the frontend, updating the emergency event if the session is in emergency mode.
 
 ---
 
-### ⭐ C. Emergency Event History
+## Tech stack
 
-كل Emergency Chat يتسجل:
-
-```text
-when started
-symptoms
-risk level
-timer
-user response
-escalation status
-```
-
-وده ممتاز جدًا للـ demo والـ backend architecture.
-
----
-
-### ⭐ D. Sources
-
-كل response من الـ RAG يرجع:
-
-```json
-{
-  "answer": "...",
-  "sources": [
-    {
-      "title": "WHO Framework...",
-      "page": 21
-    }
-  ]
-}
-```
-
-دي مهمة جدًا لأن مشروعكم Medical AI.
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite, Tailwind CSS, React Router |
+| Backend | FastAPI, SQLAlchemy 2.0, Pydantic |
+| Database | PostgreSQL (Neon, serverless) — falls back to SQLite when `DATABASE_URL` isn't set |
+| Vector store | Qdrant, embedded local mode (no Docker, no cloud service) |
+| LLM | Google Gemini `gemini-2.5-flash` via the `google-genai` SDK |
+| Embeddings | `gemini-embedding-001`, 768 dimensions, cosine distance |
+| Auth | JWT (python-jose) + bcrypt password hashing, Google Sign-In (ID token verification) |
+| Voice input | Web Speech API (`webkitSpeechRecognition`, `lang: ar-EG`) |
+| Testing | pytest + httpx |
 
 ---
 
-### ⭐ E. Dark Mode
+## Medical knowledge base & citations
 
-دي **Frontend feature**، مش محتاجة Database.
+The RAG corpus lives in `backend/corpus/` as 14 curated Markdown documents, each with YAML frontmatter (`title`, `org`, `url`, `condition`, `lang`) and a condensed, faithfully-summarized body sourced from public guidance published by:
 
----
+- **World Health Organization (WHO)**
+- **American Heart Association / American Stroke Association (AHA/ASA)**
+- **NHS (UK National Health Service)**
+- **CDC (US Centers for Disease Control and Prevention)**
 
-# 3. حاجات لا أنصح بها دلوقتي
+Coverage: stroke warning signs and risk factors, chest pain / heart attack symptoms and first aid, asthma attacks, choking first aid, COPD/shortness of breath, and Egypt-specific emergency numbers and when-to-call guidance. **Three documents are written in Arabic** so that Arabic-language queries retrieve naturally in the same language, without relying on translation at query time.
 
-بما إن الوقت قليل، **ما تدخلّوش في**:
+At ingest time (`python -m ai.ingest`), each document is chunked (~1,500 characters with 200-character overlap, on paragraph boundaries), embedded with `gemini-embedding-001`, and upserted into the local Qdrant `medical_docs` collection.
 
-* Doctor marketplace
-* Video calls
-* Full hospital management system
-* Appointment booking
-* Payment
-* Huge medical records system
-* Wearable integration
-* Real ambulance API integration
-
-دي هتضيع وقتكم.
+At answer time, the agent retrieves the top 4 relevant chunks, labels them `[1]`–`[4]` in the prompt, and asks Gemini to return which sources it actually used. **Every AI answer that draws on the corpus displays its sources as clickable citation chips** (`📚 {organization} — {title}`) linking back to the original publication — this is deliberate: a medical assistant's claims should be traceable, not just stated.
 
 ---
 
-# 4. الـ Database النهائية
+## Safety
 
-أنا أعملها كده:
+This project is a **triage aid, not a diagnostic tool**, and that boundary is enforced at the prompt level, not just described in this document:
 
-```text
-users
-│
-├── patient_profiles
-│
-├── emergency_contacts
-│
-├── patient_conditions
-│
-├── medications
-│
-├── chat_sessions
-│      │
-│      └── messages
-│
-├── emergency_events
-│
-└── notifications
-```
-
-وفي ناحية الـ AI:
-
-```text
-                    FastAPI
-                       │
-          ┌────────────┼────────────┐
-          │            │            │
-          ▼            ▼            ▼
-     PostgreSQL      Agent        Qdrant
-          │            │            │
-      User data      LLM        Embeddings
-      Chat history   Tools      Medical docs
-      Alerts         RAG
-```
+- The system prompt explicitly forbids definitive diagnosis language ("you have a stroke"); the model is instructed to describe symptom patterns and their possible severity instead, and to always recommend professional evaluation.
+- For any recognized high-risk pattern (FAST stroke signs, chest pain radiating to the arm/jaw with sweating or breathlessness, sudden severe difficulty breathing, loss of consciousness), the assistant is instructed to state the risk clearly and recommend calling emergency services immediately — **Egypt's ambulance number, 123** — without burying that advice at the end of a long reply.
+- If the Gemini call or the retrieval step fails for any reason, the backend never returns a 500 error to the user. It returns a fixed, safe fallback message advising the user to call **123** if symptoms are severe, with `risk_level="moderate"` and no fabricated sources.
+- **The emergency escalation is simulated.** When the 60-second countdown expires, the app displays a card stating that the registered emergency contact is being notified. No real SMS, phone call, or third-party emergency-services integration is triggered — this is intentionally out of scope for a demo build and would require a licensed telephony/SMS provider and explicit user consent in a production version.
 
 ---
 
-# 5. Tables اللي أعتبرها Final
+## Getting started
 
-### `users`
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- A Gemini API key ([Google AI Studio](https://aistudio.google.com/))
+- (Optional) A Postgres connection string (e.g. from [Neon](https://neon.tech/)) — otherwise the backend falls back to a local SQLite file automatically
 
-```text
-id
-name
-email
-password_hash
-auth_provider
-provider_id
-created_at
-updated_at
+### Backend
+
+```bash
+cd backend
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-### `patient_profiles`
+Create `backend/.env`:
 
-```text
-id
-user_id
-patient_id
-blood_type
-created_at
-updated_at
+```env
+# Optional — omit to use a local SQLite fallback (sqlite:///./cacheai.db)
+DATABASE_URL=postgresql://user:password@host/dbname
+
+# Required — JWT signing secret
+SECRET_KEY=replace-with-a-long-random-string
+
+# Required for Google Sign-In
+GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+
+# Required for chat/RAG — never commit this value
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### `patient_conditions`
+Build the vector index once (reads `backend/corpus/*.md`, embeds, and upserts into the local Qdrant collection):
 
-بدل JSON، مع الـ 3 diseases بتوعكم أنا أفضل جدول:
-
-```text
-id
-patient_id
-condition
-severity
-diagnosed_at
-created_at
+```bash
+python -m ai.ingest
 ```
 
-مثلاً:
+Run the API:
 
-```text
-stroke
-chest_condition
-breathing_condition
+```bash
+uvicorn main:app --reload
 ```
+
+The backend serves at `http://127.0.0.1:8000` (docs at `/docs`).
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+Create `frontend/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+```bash
+npm run dev
+```
+
+The app serves at `http://localhost:5173`.
 
 ---
 
-### `medications`
+## Testing
 
-```text
-id
-patient_id
-name
-dosage
-frequency
-created_at
+```bash
+cd backend
+pytest
 ```
 
-### `emergency_contacts`
-
-```text
-id
-user_id
-name
-phone
-email
-relationship
-```
+Backend tests exercise the FastAPI app via `httpx` (see `backend/tests/`).
 
 ---
 
-### `chat_sessions`
+## Project structure
 
-```text
-id
-user_id
-chat_type
-title
-created_at
-updated_at
 ```
+backend/
+  ai/            agent.py (Gemini orchestration), rag.py (Qdrant + embeddings),
+                 prompts.py, ingest.py (corpus indexing CLI)
+  corpus/        14 curated Markdown medical documents (WHO / AHA / NHS / CDC)
+  routers/       auth, chat, emergency, profile
+  models.py      SQLAlchemy models
+  main.py        FastAPI app entrypoint
+  tests/         pytest suite
 
-`chat_type`:
-
-```text
-normal
-emergency
+frontend/
+  src/pages/     Chat, Login, SignUp, Profile, EditProfile, EmergencyAuth, Home
+  src/components/ SideBar, EmergencyMode, and shared UI
+  src/lib/api.js  fetch helpers + auth token storage
 ```
-
-### `messages`
-
-```text
-id
-chat_session_id
-sender
-content
-created_at
-```
-
-ممكن:
-
-```text
-sender = user / assistant
-```
-
----
-
-### `emergency_events`
-
-دي مهمة جدًا:
-
-```text
-id
-user_id
-chat_session_id
-condition
-risk_level
-started_at
-timer_seconds
-responded_at
-escalation_status
-resolved_at
-```
-
-مثلاً:
-
-```text
-condition = breathing
-risk_level = high
-timer_seconds = 60
-escalation_status = emergency_contact
-```
-
----
-
-### `notifications`
-
-```text
-id
-user_id
-condition
-type
-message
-scheduled_at
-sent_at
-responded_at
-status
-```
-
-مثلاً:
-
-```text
-type = medication_reminder
-status = pending
-```
-
----
-
-# 6. والـ Sources؟
-
-أنا **مش هحط الـ medical documents نفسها في PostgreSQL**.
-
-لأن عندكم Qdrant.
-
-يبقى:
-
-```text
-PostgreSQL
-    │
-    └── source metadata
-
-Qdrant
-    │
-    ├── chunks
-    ├── embeddings
-    └── metadata
-```
-
-والـ metadata ممكن تحتوي:
-
-```text
-document_id
-title
-page
-source
-chunk_id
-```
-
----
-
-# 7. والـ Agent؟
-
-الـ Agent مش Database.
-
-هيبقى فوق الـ RAG:
-
-```text
-User
- ↓
-FastAPI
- ↓
-Agent
- ├── decide: normal/emergency
- ├── retrieve from Qdrant
- ├── get patient context from PostgreSQL
- ├── call LLM
- └── return answer + sources
-```
-
----
-
-# 8. يبقى الـ Architecture النهائية
-
-```text
-                    ┌─────────────┐
-                    │   React     │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   FastAPI   │
-                    └──────┬──────┘
-                           │
-             ┌─────────────┼─────────────┐
-             │             │             │
-             ▼             ▼             ▼
-      ┌────────────┐ ┌────────────┐ ┌───────────┐
-      │ PostgreSQL │ │   Agent    │ │  Qdrant   │
-      │            │ │            │ │           │
-      │ Users      │ │ LLM        │ │ Documents │
-      │ Profiles   │ │ RAG        │ │ Embeddings│
-      │ Chats      │ │ Tools      │ │ Sources   │
-      │ Alerts     │ └────────────┘ └───────────┘
-      └────────────┘
-```
-
-## 🎯 إذن الـ Features النهائية اللي أبني عليها الـ Backend
-
-**Must have:**
-
-1. Authentication
-2. Patient profile
-3. Emergency contact
-4. AI Chat
-5. Chat history
-6. RAG + Qdrant
-7. Agent
-8. Sources/citations
-9. Emergency Chat + timer
-10. Symptom assessment
-11. Risk level
-12. Disease-specific workflows:
-
-* Stroke
-* Chest/heart
-* Breathing
-
-13. Notifications/reminders
-14. Escalation to emergency contact
-15. Emergency event history
-
-**Nice-to-have:**
-16. Medications
-17. Allergies
-18. Dark mode
-19. Voice input
-
-**مش محتاجين أكتر من كده للـ MVP.**
-
-وبالتالي **أيوه: PostgreSQL + Qdrant هو اختيار مناسب جدًا** للمشروع؛ PostgreSQL للـ structured/user/application data، وQdrant للـ vector retrieval. والأهم إننا دلوقتي نثبت الـ schema ده ثم نبني عليه FastAPI، بدل ما نبدأ كتابة endpoints وبعدين نكتشف إننا ناقصنا جداول للـ emergency والnotifications.

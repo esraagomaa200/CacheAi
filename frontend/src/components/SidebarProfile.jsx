@@ -5,6 +5,7 @@ import {
   LuMessageSquare,
   LuUserRound,
   LuShieldAlert,
+  LuHistory,
   LuLogOut,
   LuChevronRight,
 } from "react-icons/lu";
@@ -29,6 +30,11 @@ function SidebarProfile() {
       name: "Profile",
       path: "/profile",
       icon: LuUserRound,
+    },
+    {
+      name: "Emergency History",
+      path: "/emergency-history",
+      icon: LuHistory,
     },
   ];
 

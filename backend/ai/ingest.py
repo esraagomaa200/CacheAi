@@ -85,15 +85,16 @@ def main() -> None:
         print(f"No .md files found in {CORPUS_DIR}")
         return
 
-    rag.ensure_collection(recreate=True)
-
     all_chunks: list[dict] = []
     for path in files:
         file_chunks = list(_iter_file_chunks(path))
         all_chunks.extend(file_chunks)
         print(f"{path.name}: {len(file_chunks)} chunks")
 
-    written = rag.upsert_chunks(all_chunks)
+    vectors = rag.embed_documents([chunk["text"] for chunk in all_chunks])
+
+    rag.ensure_collection(recreate=True)
+    written = rag.write_chunks(all_chunks, vectors)
     print(f"Total: {written} chunks upserted into '{rag.COLLECTION_NAME}'")
 
 
