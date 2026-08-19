@@ -28,7 +28,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ai import rag  # reuses env loading + GEMINI_API_KEY handling
 from ai.prompts import LIVE_CALL_SYSTEM_PROMPT
 from database import SessionLocal
-from models import User
+from models import ChatSession, Message, User
+from routers.chat import TITLE_PREVIEW_LENGTH, _is_untitled
 from security import verify_token
 
 router = APIRouter(prefix="/chat", tags=["Live"])
@@ -45,7 +46,96 @@ INPUT_SAMPLE_RATE = 16000
 
 # WebSocket close codes (4000-4999 is the application-defined range).
 WS_UNAUTHORIZED = 4401
+WS_SESSION_NOT_FOUND = 4404
 WS_INTERNAL_ERROR = 4500
+
+
+class TranscriptRecorder:
+    """Persists what was said during a call as regular chat Messages.
+
+    Deltas accumulate in memory; a flush happens on each turn boundary
+    (turn_complete / interrupted) and once more at call end. Every flush
+    opens a short-lived DB session in a worker thread — a Neon roundtrip
+    on the event loop would stutter the audio relay.
+
+    With session_id=None (no ?session= param, e.g. the legacy overlay)
+    the recorder is a no-op and the call stays stateless as before.
+    """
+
+    def __init__(self, user_id: int, session_id: int | None):
+        self.user_id = user_id
+        self.session_id = session_id
+        self._user_buf: list[str] = []
+        self._assistant_buf: list[str] = []
+
+    @property
+    def enabled(self) -> bool:
+        return self.session_id is not None
+
+    def add_user(self, text: str) -> None:
+        if self.enabled and text:
+            self._user_buf.append(text)
+
+    def add_assistant(self, text: str) -> None:
+        if self.enabled and text:
+            self._assistant_buf.append(text)
+
+    async def flush(self) -> None:
+        if not self.enabled:
+            return
+        user_text = "".join(self._user_buf).strip()
+        assistant_text = "".join(self._assistant_buf).strip()
+        self._user_buf.clear()
+        self._assistant_buf.clear()
+        if not user_text and not assistant_text:
+            return
+        await asyncio.to_thread(self._flush_sync, user_text, assistant_text)
+
+    def _flush_sync(self, user_text: str, assistant_text: str) -> None:
+        db = SessionLocal()
+        try:
+            if user_text:
+                db.add(Message(
+                    chat_session_id=self.session_id,
+                    sender="user",
+                    content=user_text,
+                ))
+                session = db.query(ChatSession).filter(
+                    ChatSession.id == self.session_id
+                ).first()
+                if session is not None and _is_untitled(session.title):
+                    session.title = user_text[:TITLE_PREVIEW_LENGTH]
+            if assistant_text:
+                db.add(Message(
+                    chat_session_id=self.session_id,
+                    sender="assistant",
+                    content=assistant_text,
+                ))
+            db.commit()
+        except Exception:
+            # Persistence must never take the live call down with it.
+            db.rollback()
+        finally:
+            db.close()
+
+
+def _owned_session_id(user: User, raw: str | None) -> int | None | bool:
+    """Resolve ?session= → int (valid), None (absent), False (invalid)."""
+    if raw is None or raw == "":
+        return None
+    try:
+        session_id = int(raw)
+    except (TypeError, ValueError):
+        return False
+    db = SessionLocal()
+    try:
+        owned = db.query(ChatSession).filter(
+            ChatSession.id == session_id,
+            ChatSession.user_id == user.id,
+        ).first()
+        return session_id if owned is not None else False
+    finally:
+        db.close()
 
 
 def _authenticate(token: str | None) -> User | None:
@@ -106,6 +196,10 @@ def _build_config():
         # start answering after ~0.5s of silence instead of ~1s.
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
+                # LOW start sensitivity: ambient noise kept hallucinating
+                # phantom user turns (transcribed as random foreign phrases)
+                # and the model answered them / repeated itself.
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
                 end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
                 silence_duration_ms=500,
             )
@@ -167,7 +261,9 @@ async def _pump_browser_to_gemini(ws: WebSocket, session) -> None:
                 )
 
 
-async def _pump_gemini_to_browser(ws: WebSocket, session) -> None:
+async def _pump_gemini_to_browser(
+    ws: WebSocket, session, recorder: TranscriptRecorder
+) -> None:
     """Relay model audio + transcripts + barge-in signals to the browser.
 
     Attribute names verified against the installed google-genai 2.18.1
@@ -185,12 +281,15 @@ async def _pump_gemini_to_browser(ws: WebSocket, session) -> None:
 
         # Barge-in first: the browser must drop its queued audio before it
         # gets any newer audio, otherwise the interrupted reply keeps
-        # playing over the fresh one.
+        # playing over the fresh one. The cut-off partial reply is still a
+        # thing the user heard — persist it before the next turn begins.
         if getattr(server_content, "interrupted", False):
             await ws.send_json({"type": "interrupted"})
+            await recorder.flush()
 
         user_text = getattr(server_content, "input_transcription", None)
         if user_text is not None and user_text.text:
+            recorder.add_user(user_text.text)
             await ws.send_json(
                 {
                     "type": "transcript",
@@ -202,6 +301,7 @@ async def _pump_gemini_to_browser(ws: WebSocket, session) -> None:
 
         model_text = getattr(server_content, "output_transcription", None)
         if model_text is not None and model_text.text:
+            recorder.add_assistant(model_text.text)
             await ws.send_json(
                 {
                     "type": "transcript",
@@ -215,9 +315,10 @@ async def _pump_gemini_to_browser(ws: WebSocket, session) -> None:
         # uses to seal a bubble instead of appending forever.
         if getattr(server_content, "turn_complete", False):
             await ws.send_json({"type": "turn_complete"})
+            await recorder.flush()
 
 
-async def _run_call(ws: WebSocket) -> None:
+async def _run_call(ws: WebSocket, recorder: TranscriptRecorder) -> None:
     """Open the Gemini session and run both pumps until either one ends."""
     client = rag.get_genai_client()
     config = _build_config()
@@ -229,7 +330,7 @@ async def _run_call(ws: WebSocket) -> None:
 
         tasks = [
             asyncio.create_task(_pump_browser_to_gemini(ws, session)),
-            asyncio.create_task(_pump_gemini_to_browser(ws, session)),
+            asyncio.create_task(_pump_gemini_to_browser(ws, session, recorder)),
         ]
         try:
             done, pending = await asyncio.wait(
@@ -241,6 +342,9 @@ async def _run_call(ws: WebSocket) -> None:
             # Await the cancellations so neither pump outlives the session
             # context manager and touches a closed socket.
             await asyncio.gather(*tasks, return_exceptions=True)
+            # Whatever was mid-turn when the call ended still belongs to
+            # the conversation history.
+            await recorder.flush()
 
         # Surface a real failure (as opposed to a clean hang-up) to the
         # outer handler, which turns it into an error frame + close.
@@ -264,8 +368,16 @@ async def live_call(ws: WebSocket) -> None:
         await ws.close(code=WS_UNAUTHORIZED, reason="Invalid or expired token")
         return
 
+    # Optional ?session=<id>: ties the call to a chat session so the spoken
+    # conversation persists as regular messages. Absent → stateless call.
+    session_id = _owned_session_id(user, ws.query_params.get("session"))
+    if session_id is False:
+        await ws.close(code=WS_SESSION_NOT_FOUND, reason="Chat session not found")
+        return
+    recorder = TranscriptRecorder(user.id, session_id)
+
     try:
-        await _run_call(ws)
+        await _run_call(ws, recorder)
     except WebSocketDisconnect:
         # User hung up / navigated away — nothing to clean up, nothing to
         # report.
