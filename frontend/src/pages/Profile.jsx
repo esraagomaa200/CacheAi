@@ -16,6 +16,7 @@ import {
 
 import SidebarProfile from "../components/SidebarProfile";
 import { useNavigate } from "react-router-dom";
+import { apiFetch, mapBackendProfileToForm } from "../lib/api";
 
 function Profile() {
   const navigate = useNavigate();
@@ -30,65 +31,19 @@ function Profile() {
 
   const fetchProfile = async () => {
     try {
-      // Get access token from localStorage
-      const token = localStorage.getItem("accessToken");
-
-      if (!token) {
+      if (!localStorage.getItem("accessToken")) {
         setError("You are not logged in.");
         setLoading(false);
         return;
       }
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/profile/me",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail || "Failed to load profile"
-        );
-      }
+      const data = await apiFetch("/profile/me");
 
       // ------------------------------------------------
       // Convert backend response to frontend structure
       // ------------------------------------------------
 
-      const formattedProfile = {
-        fullName: data.user?.name || "",
-        email: data.user?.email || "",
-
-        patientId:
-          data.patient_profile?.patient_id || "",
-
-        dateOfBirth:
-          data.patient_profile?.date_of_birth || "",
-
-        gender:
-          data.patient_profile?.gender || "",
-
-        bloodType:
-          data.patient_profile?.blood_type || "",
-
-        chronicDiseases:
-          data.patient_profile?.chronic_conditions || [],
-
-        emergencyName:
-          data.emergency_contact?.name || "",
-
-        emergencyPhone:
-          data.emergency_contact?.phone || "",
-
-        emergencyEmail:
-          data.emergency_contact?.email || "",
-      };
+      const formattedProfile = mapBackendProfileToForm(data);
 
       setProfile(formattedProfile);
 

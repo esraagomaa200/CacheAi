@@ -1,41 +1,60 @@
-import { Sparkles, ArrowRight, CirclePlay } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import robot from "../assets/images/robot.png";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  apiFetch,
+  clearAccessToken,
+  getAccessToken,
+} from "../lib/api";
 
 function Hero() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [checkingAuth, setCheckingAuth] = useState(false);
+
+  const handleStartChatting = async () => {
+    const token = getAccessToken();
+
+    // A new visitor should create an account first.
+    if (!token) {
+      navigate("/signup");
+      return;
+    }
+
+    setCheckingAuth(true);
+
+    try {
+      // Validate that the saved JWT still belongs to a valid backend user.
+      await apiFetch("/auth/me");
+      navigate("/chat");
+    } catch (error) {
+      // Expired or invalid tokens must not grant access to the chat.
+      clearAccessToken();
+      navigate("/login");
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
   return (
     <section className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-white">
-      
-      {/* Background glow */}
       <div className="absolute right-[12%] top-10 h-[420px] w-[420px] rounded-full bg-emerald-50/70 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center px-8 lg:px-12">
-        
-        {/* Left Content */}
         <div className="z-10 w-full lg:w-1/2">
-
-          {/* Badge */}
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/70 px-4 py-2">
-            <Sparkles
-              size={16}
-              strokeWidth={2}
-              className="text-emerald-500"
-            />
-
+            <Sparkles size={16} strokeWidth={2} className="text-emerald-500" />
             <span className="text-sm font-semibold text-emerald-600">
               Your AI Health Assistant
             </span>
           </div>
 
-          {/* Heading */}
           <h1 className="max-w-[600px] text-5xl font-bold leading-[1.08] tracking-[-1.5px] text-[#0B2028] md:text-6xl">
             Smart Healthcare,
             <br />
             Anytime, Anywhere
           </h1>
 
-          {/* Description */}
           <p className="mt-6 max-w-[520px] text-[17px] leading-7 text-[#40545C]">
             NajdaAI is your intelligent medical assistant.
             <br />
@@ -44,96 +63,43 @@ function Hero() {
             reliable health information in seconds.
           </p>
 
-          {/* Buttons */}
           <div className="mt-8 flex items-center gap-5">
+            <button
+              onClick={handleStartChatting}
+              disabled={checkingAuth}
+              className="group flex items-center gap-4 rounded-xl bg-[#19A878] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#15966B] hover:shadow-lg disabled:cursor-wait disabled:opacity-70"
+            >
+              {checkingAuth ? "Checking..." : "Start Chatting"}
+              <ArrowRight
+                size={19}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </button>
 
-            {/* Start Chatting */}
-<button
-  onClick={() => navigate("/signup")}
-  className="
-    group
-    flex
-    items-center
-    gap-4
-    rounded-xl
-    bg-[#19A878]
-    px-6
-    py-3.5
-    text-[15px]
-    font-semibold
-    text-white
-    shadow-sm
-    transition-all
-    duration-300
-    hover:-translate-y-0.5
-    hover:bg-[#15966B]
-    hover:shadow-lg
-  "
->
-  Start Chatting
-
-  <ArrowRight
-    size={19}
-    className="transition-transform duration-300 group-hover:translate-x-1"
-  />
-</button>
-
-  {/* Emergency */}
-  <button
-  onClick={() => navigate("/emergency-auth")}
-  className="
-    flex
-    items-center
-    gap-3
-    rounded-xl
-    border
-    border-[#D8E1E1]
-    bg-[#fd5d5d]
-    px-6
-    py-3.5
-    text-[15px]
-    font-semibold
-    text-[#18323A]
-    transition-all
-    duration-300
-    hover:border-emerald-300
-    hover:bg-emerald-50
-  "
->
-  Emergency ⚠️
-</button>
+            <button
+              onClick={() => navigate("/emergency-auth")}
+              className="flex items-center gap-3 rounded-xl border border-[#D8E1E1] bg-[#fd5d5d] px-6 py-3.5 text-[15px] font-semibold text-[#18323A] transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50"
+            >
+              Emergency
+            </button>
           </div>
         </div>
 
-        {/* Right - Robot */}
         <div className="relative hidden h-[520px] w-1/2 items-center justify-center lg:flex">
-
-          {/* Main glow */}
           <div className="absolute h-[440px] w-[440px] rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 blur-sm" />
-
-          {/* Robot image */}
           <img
             src={robot}
-            alt="CacheAI AI Health Assistant"
-            className="
-              relative
-              z-10
-              w-[440px]
-              object-contain
-              drop-shadow-[0_20px_35px_rgba(0,0,0,0.08)]
-            "
+            alt="NajdaAI AI Health Assistant"
+            className="relative z-10 w-[440px] object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.08)]"
           />
-
-          {/* Small floating dots */}
           <span className="absolute right-8 top-16 h-2 w-2 rounded-full bg-emerald-400" />
           <span className="absolute right-0 top-48 h-1.5 w-1.5 rounded-full bg-emerald-300" />
           <span className="absolute left-16 top-28 h-2 w-2 rounded-full bg-emerald-300" />
-
         </div>
-
       </div>
     </section>
   );
 }
 
 export default Hero;
+

@@ -20,6 +20,11 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import {
+  API_BASE_URL,
+  formatApiError,
+  setAccessToken,
+} from "../lib/api";
 
 const CHRONIC_DISEASES = [
   { id: "diabetes", label: "Diabetes", icon: Smartphone },
@@ -177,7 +182,8 @@ const handleSubmit = async (e) => {
      */
 
     const response = await fetch(
-      "http://127.0.0.1:8000/auth/register",
+            `${API_BASE_URL}/auth/register`,
+
       {
         method: "POST",
 
@@ -224,8 +230,7 @@ const handleSubmit = async (e) => {
 
     if (!response.ok) {
       throw new Error(
-        result.detail ||
-        "Registration failed"
+        formatApiError(result, response.status)
       );
     }
 
@@ -234,10 +239,8 @@ const handleSubmit = async (e) => {
      */
 
     if (result.access_token) {
-      localStorage.setItem(
-        "accessToken",
-        result.access_token
-      );
+            setAccessToken(result.access_token);
+
     }
 
     /*
