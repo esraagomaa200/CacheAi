@@ -258,7 +258,14 @@ export default function Login() {
 
           {/* Google renders its own button here */}
           <div className="flex justify-center">
-            <div ref={googleButtonRef} className="flex justify-center" />
+            {/* colorScheme light: a cross-origin iframe declaring light inside
+                a dark color-scheme page gets an opaque white canvas in
+                Chromium — matching schemes keeps the GSI iframe transparent. */}
+            <div
+              ref={googleButtonRef}
+              className="flex justify-center"
+              style={{ colorScheme: "light" }}
+            />
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-500">

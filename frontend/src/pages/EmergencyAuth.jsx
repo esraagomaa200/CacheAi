@@ -138,7 +138,14 @@ export default function EmergencyAuth() {
 
           {/* Google renders its own button here */}
           <div className="mt-7 flex justify-center">
-            <div ref={buttonRef} className="flex justify-center" />
+            {/* colorScheme light: keeps the cross-origin GSI iframe transparent
+                under data-theme=dark (Chromium paints it opaque white on a
+                color-scheme mismatch). */}
+            <div
+              ref={buttonRef}
+              className="flex justify-center"
+              style={{ colorScheme: "light" }}
+            />
           </div>
 
           {loading && (
