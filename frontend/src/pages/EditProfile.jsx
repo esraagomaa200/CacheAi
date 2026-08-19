@@ -20,6 +20,11 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import SidebarProfile from "../components/SidebarProfile";
+import {
+  apiFetch,
+  mapBackendProfileToForm,
+  profileFormToBackendPayload,
+} from "../lib/api";
 
 
 /* ========================================================= */
@@ -213,73 +218,45 @@ function EditProfile() {
   /* ======================================================= */
 
   const [chronicDiseases, setChronicDiseases] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
 
   /* ======================================================= */
-  /* LOAD PROFILE */
+  /* LOAD PROFILE FROM BACKEND */
   /* ======================================================= */
 
   useEffect(() => {
-
-    const savedProfile =
-      localStorage.getItem("profileData");
-
-    if (!savedProfile) {
-      navigate("/profile");
-      return;
-    }
-
-    try {
-
-      const profile = JSON.parse(savedProfile);
-
-      setFormData({
-        fullName: profile.fullName || "",
-        patientId: profile.patientId || "",
-        email: profile.email || "",
-
-        dateOfBirth:
-          profile.dateOfBirth || "",
-
-        gender:
-          profile.gender || "",
-
-        bloodType:
-          profile.bloodType || "",
-
-        emergencyName:
-          profile.emergencyName || "",
-
-        emergencyPhone:
-          profile.emergencyPhone || "",
-
-        emergencyEmail:
-          profile.emergencyEmail || "",
-
-        otherCondition:
-          profile.otherCondition || "",
-      });
-
-
-      if (Array.isArray(profile.chronicDiseases)) {
-
-        setChronicDiseases(
-          profile.chronicDiseases
-        );
-
+    const loadProfile = async () => {
+      if (!localStorage.getItem("accessToken")) {
+        navigate("/login");
+        return;
       }
 
-    } catch (error) {
+      try {
+        const data = await apiFetch("/profile/me");
+        const profile = mapBackendProfileToForm(data);
 
-      console.error(
-        "Failed to load profile:",
-        error
-      );
+        setFormData({
+          fullName: profile.fullName,
+          patientId: profile.patientId,
+          email: profile.email,
+          dateOfBirth: profile.dateOfBirth,
+          gender: profile.gender,
+          bloodType: profile.bloodType,
+          emergencyName: profile.emergencyName,
+          emergencyPhone: profile.emergencyPhone,
+          emergencyEmail: profile.emergencyEmail,
+          otherCondition: "",
+        });
+        setChronicDiseases(profile.chronicDiseases);
+      } catch (loadError) {
+        console.error("Failed to load profile:", loadError);
+        navigate("/profile");
+      }
+    };
 
-      navigate("/profile");
-
-    }
-
+    loadProfile();
   }, [navigate]);
 
 
@@ -332,58 +309,26 @@ function EditProfile() {
   /* SAVE CHANGES */
   /* ======================================================= */
 
-  const handleSubmit = (e) => {
-
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError("");
 
+    try {
+      await apiFetch("/profile/me", {
+        method: "PUT",
+        body: JSON.stringify(
+          profileFormToBackendPayload(formData, chronicDiseases)
+        ),
+      });
 
-    const updatedProfile = {
-
-      fullName:
-        formData.fullName,
-
-      patientId:
-        formData.patientId,
-
-      email:
-        formData.email,
-
-      dateOfBirth:
-        formData.dateOfBirth,
-
-      gender:
-        formData.gender,
-
-      bloodType:
-        formData.bloodType,
-
-      chronicDiseases:
-        chronicDiseases,
-
-      otherCondition:
-        formData.otherCondition,
-
-      emergencyName:
-        formData.emergencyName,
-
-      emergencyPhone:
-        formData.emergencyPhone,
-
-      emergencyEmail:
-        formData.emergencyEmail,
-    };
-
-
-    localStorage.setItem(
-      "profileData",
-      JSON.stringify(
-        updatedProfile
-      )
-    );
-
-
-    navigate("/profile");
-
+      navigate("/profile");
+    } catch (submitError) {
+      console.error("Failed to update profile:", submitError);
+      setError(submitError.message || "Failed to update profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
 
@@ -503,6 +448,11 @@ function EditProfile() {
           <form
             onSubmit={handleSubmit}
           >
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
 
 
             {/* ================================================= */}
@@ -1135,7 +1085,7 @@ function EditProfile() {
 
                 <Check size={17} />
 
-                Save Changes
+                {saving ? "Saving..." : "Save Changes"}
 
               </button>
 

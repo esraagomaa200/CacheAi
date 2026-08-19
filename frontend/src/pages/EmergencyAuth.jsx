@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldAlert } from "lucide-react";
+import {
+  API_BASE_URL,
+  formatApiError,
+  setAccessToken,
+} from "../lib/api";
 
 // Set this to your Google Cloud Console OAuth 2.0 Web Client ID.
 // (Google Cloud Console -> APIs & Services -> Credentials)
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "832987608983-d0g7flf8phslosqpjhmvpddgsc6t1vdi.apps.googleusercontent.com";
 
 export default function EmergencyAuth() {
   const navigate = useNavigate();
@@ -21,7 +26,7 @@ export default function EmergencyAuth() {
       setLoading(true);
       setError("");
 
-      const res = await fetch("http://127.0.0.1:8000/auth/google", {
+      const res = await fetch(`${API_BASE_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_token: response.credential }),
@@ -30,13 +35,15 @@ export default function EmergencyAuth() {
       const result = await res.json();
 
       if (!res.ok) {
-        throw new Error(result.detail || "Google sign-in failed");
+        throw new Error(
+          formatApiError(result, res.status)
+        );
       }
 
       // Same token our normal /auth/login flow produces — everything
       // else in the app (get_current_user, /auth/me, etc.) works
       // exactly the same regardless of how the user signed in.
-      localStorage.setItem("accessToken", result.access_token);
+      setAccessToken(result.access_token);
 
       navigate("/emergency");
     } catch (err) {
@@ -55,10 +62,18 @@ export default function EmergencyAuth() {
     script.async = true;
     script.defer = true;
 
-    script.onload = () => {
+        script.onload = () => {
+      if (!GOOGLE_CLIENT_ID) {
+        setError(
+          "Google Client ID is missing. Add VITE_GOOGLE_CLIENT_ID to .env.local and restart the frontend."
+        );
+        return;
+      }
+
       if (!window.google || !buttonRef.current) return;
 
       window.google.accounts.id.initialize({
+
         client_id: GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
       });
