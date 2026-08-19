@@ -19,6 +19,8 @@ const en = {
     emptyHistory: "No chats yet",
     logout: "Logout",
     emergencyMode: "Emergency Mode",
+    openMenu: "Open navigation",
+    closeMenu: "Close navigation",
     immediateAssistance: "Get immediate assistance",
     urgentHelp: "Need urgent help?",
     urgentHelpInstructions:
@@ -291,6 +293,7 @@ const en = {
     optionalBadge: "Optional",
     requiredNote:
       "This step is required so NajdaAI can notify someone if you don't respond during a safety check.",
+    emailOptionalLabel: "Email Address (optional)",
     optionalTitle: "A few more details (optional)",
     optionalNote:
       "Adding these now helps NajdaAI give you more accurate guidance. You can always fill them in later from your profile.",

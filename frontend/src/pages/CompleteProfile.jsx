@@ -405,7 +405,7 @@ function CompleteProfile() {
                   </Field>
 
                   <div className="md:col-span-2">
-                    <Field label={t("profile.fields.email")}>
+                    <Field label={t("completeProfile.emailOptionalLabel")}>
                       <InputShell icon={Mail}>
                         <input
                           type="email"

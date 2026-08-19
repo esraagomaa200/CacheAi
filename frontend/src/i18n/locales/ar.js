@@ -19,6 +19,8 @@ const ar = {
     emptyHistory: "لا توجد محادثات بعد",
     logout: "تسجيل الخروج",
     emergencyMode: "وضع الطوارئ",
+    openMenu: "فتح قائمة التنقل",
+    closeMenu: "إغلاق قائمة التنقل",
     immediateAssistance: "احصل على مساعدة فورية",
     urgentHelp: "هل تحتاج إلى مساعدة عاجلة؟",
     urgentHelpInstructions:
@@ -288,6 +290,7 @@ const ar = {
     optionalBadge: "اختياري",
     requiredNote:
       "الخطوة دي مطلوبة عشان نجدة AI تقدر تبلغ حد لو محدش رد وقت فحص الأمان.",
+    emailOptionalLabel: "البريد الإلكتروني (اختياري)",
     optionalTitle: "كمّل بيانات إضافية (اختياري)",
     optionalNote:
       "إضافة البيانات دي دلوقتي بتساعد نجدة AI تقدّم إرشاد أدق. تقدر تكملها بعدين من ملفك الشخصي.",
