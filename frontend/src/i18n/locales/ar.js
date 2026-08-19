@@ -142,6 +142,7 @@ const ar = {
     requiredCredentials: "أدخل بريدك الإلكتروني وكلمة المرور.",
     invalidCredentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     duplicateEmail: "يوجد حساب مسجل بهذا البريد الإلكتروني بالفعل.",
+    registrationConflict: "يوجد حساب أو رقم مريض مسجل بهذه المعلومات بالفعل.",
     googleFailure: "تعذر تسجيل الدخول باستخدام Google.",
     registrationFailure: "حدث خطأ أثناء إنشاء حسابك.",
     genericFailure: "حدث خطأ ما. يرجى المحاولة مرة أخرى.",

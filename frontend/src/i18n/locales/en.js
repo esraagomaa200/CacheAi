@@ -144,6 +144,7 @@ const en = {
     requiredCredentials: "Please enter your email and password.",
     invalidCredentials: "Incorrect email or password",
     duplicateEmail: "An account with this email already exists.",
+    registrationConflict: "An account with this email or patient ID already exists.",
     googleFailure: "Unable to sign in with Google.",
     registrationFailure: "Something went wrong while creating your account.",
     genericFailure: "Something went wrong. Please try again.",

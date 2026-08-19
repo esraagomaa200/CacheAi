@@ -79,9 +79,15 @@ const inputBase =
 function getRegistrationErrorKey(error) {
   const detail = error instanceof Error ? error.message.toLowerCase() : "";
 
-  return /duplicate|already exists|already registered|unique/.test(detail)
-    ? "errors.duplicateEmail"
-    : "errors.registrationFailure";
+  if (/email\s+or\s+patient\s+id\s+already\s+exists/.test(detail)) {
+    return "errors.registrationConflict";
+  }
+
+  if (/email.*(?:duplicate|already exists|already registered|unique)/.test(detail)) {
+    return "errors.duplicateEmail";
+  }
+
+  return "errors.registrationFailure";
 }
 
 export default function SignupFormFields() {
