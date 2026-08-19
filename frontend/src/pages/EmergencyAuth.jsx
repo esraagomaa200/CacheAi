@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldAlert } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 import {
   API_BASE_URL,
   formatApiError,
@@ -96,7 +97,9 @@ export default function EmergencyAuth() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
+      <ThemeToggle compact className="absolute right-5 top-5 z-20" />
+
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-[#E2EAE7] bg-white p-8 shadow-sm">
           {/* Icon */}

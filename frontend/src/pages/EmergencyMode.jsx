@@ -7,6 +7,7 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
+import ThemeToggle from "../components/ThemeToggle";
 
 function EmergencyMode() {
   const navigate = useNavigate();
@@ -32,13 +33,17 @@ function EmergencyMode() {
 
         </div>
 
-        {/* Emergency Badge */}
-        <div className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact />
 
-          <LuTriangleAlert size={17} />
+          {/* Emergency Badge */}
+          <div className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
 
-          <span>Emergency Mode</span>
+            <LuTriangleAlert size={17} />
 
+            <span>Emergency Mode</span>
+
+          </div>
         </div>
 
       </header>

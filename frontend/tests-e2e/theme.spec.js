@@ -5,9 +5,9 @@ const THEME_KEY = "najda-theme";
 const themeButton = (page) =>
   page.getByRole("button", { name: /Switch to (?:dark|light) mode/ });
 
-async function pageBrightness(page) {
-  return page.locator("body").evaluate((body) => {
-    const color = getComputedStyle(body).backgroundColor;
+async function elementBrightness(locator) {
+  return locator.evaluate((element) => {
+    const color = getComputedStyle(element).backgroundColor;
     const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
 
     if (!channels || channels.length !== 3) {
@@ -29,7 +29,7 @@ test.describe("color theme", () => {
     await expect(
       page.getByRole("button", { name: "Switch to light mode" })
     ).toBeVisible();
-    await expect.poll(() => pageBrightness(page)).toBeLessThan(80);
+    await expect.poll(() => elementBrightness(page.locator("body"))).toBeLessThan(80);
 
     expect(
       await page.evaluate((key) => window.localStorage.getItem(key), THEME_KEY)
@@ -45,7 +45,9 @@ test.describe("color theme", () => {
     await page.getByRole("button", { name: "Switch to light mode" }).click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect.poll(() => pageBrightness(page)).toBeGreaterThan(200);
+    await expect
+      .poll(() => elementBrightness(page.locator("body")))
+      .toBeGreaterThan(200);
     expect(
       await page.evaluate((key) => window.localStorage.getItem(key), THEME_KEY)
     ).toBe("light");
@@ -58,6 +60,22 @@ test.describe("color theme", () => {
     await expect(
       page.getByRole("button", { name: "Switch to dark mode" })
     ).toBeVisible();
+  });
+
+  test("applies dark colors to the visible page surfaces", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/");
+
+    await expect
+      .poll(() => elementBrightness(page.locator("header")))
+      .toBeLessThan(80);
+    await expect
+      .poll(() => elementBrightness(page.locator("main section").first()))
+      .toBeLessThan(80);
+
+    await page.goto("/login");
+    const loginCard = page.getByRole("heading", { name: "Welcome Back" }).locator("..");
+    await expect.poll(() => elementBrightness(loginCard)).toBeLessThan(80);
   });
 
   test("offers a theme switch in every layout family", async ({

@@ -10,6 +10,7 @@ import {
 
 import logo2 from "../assets/icons/Logo2.png";
 import { clearAccessToken, getAccessToken, listSessions } from "../lib/api";
+import ThemeToggle from "./ThemeToggle";
 
 function SideBar() {
   const navigate = useNavigate();
@@ -80,6 +81,8 @@ function SideBar() {
           Najda<span className="text-[#27B58A]">AI</span>
         </span>
       </div>
+
+      <ThemeToggle className="mb-5 w-full" />
 
       {/* New Chat */}
       <button

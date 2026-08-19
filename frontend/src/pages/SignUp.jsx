@@ -1,9 +1,12 @@
 import SidebarSignUp from "../components/SidebarSignUp";
 import SignupFormFields from "../components/SignupFormFields";
+import ThemeToggle from "../components/ThemeToggle";
 
 function SignUp() {
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="relative flex min-h-screen bg-white">
+
+      <ThemeToggle compact className="absolute right-5 top-5 z-20" />
 
       <SidebarSignUp />
 

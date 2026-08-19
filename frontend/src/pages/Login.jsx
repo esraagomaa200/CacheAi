@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, HeartPulse } from "lucide-react";
 
 import logo2 from "../assets/icons/Logo2.png";
+import ThemeToggle from "../components/ThemeToggle";
 import {
   API_BASE_URL,
   apiFetch,
@@ -129,7 +130,9 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-[#F8FAFB] px-4">
+      <ThemeToggle compact className="absolute right-5 top-5 z-20" />
+
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           {/* Logo */}

@@ -13,6 +13,7 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
+import ThemeToggle from "./ThemeToggle";
 
 function SidebarProfile() {
   const navigate = useNavigate();
@@ -58,9 +59,11 @@ function SidebarProfile() {
 
       </div>
 
+      <ThemeToggle className="mt-6 w-full" />
+
 
       {/* Navigation */}
-      <nav className="mt-8 flex flex-col gap-1.5">
+      <nav className="mt-5 flex flex-col gap-1.5">
 
         {navItems.map((item) => {
           const Icon = item.icon;
