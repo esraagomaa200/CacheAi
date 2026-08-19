@@ -238,8 +238,8 @@ def _parse_triage_json(raw: str, chunks: list[dict]) -> dict:
     }
 
 
-def _call_groq_triage(system_prompt: str, contents: str) -> str:
-    """Same-prompt Groq fallback for the triage tier when Gemini raises.
+def _call_groq_triage(system_prompt: str, contents: str, model: str | None = None) -> str:
+    """Groq triage call for a specific model (default: the big triage model).
 
     Groq's response_format=json_object only guarantees valid JSON, not a
     specific shape (unlike Gemini's response_schema), so the exact key
@@ -247,7 +247,7 @@ def _call_groq_triage(system_prompt: str, contents: str) -> str:
     """
     client = _get_groq_client()
     completion = client.chat.completions.create(
-        model=GROQ_TRIAGE_MODEL,
+        model=model or GROQ_TRIAGE_MODEL,
         temperature=0,
         response_format={"type": "json_object"},
         messages=[
@@ -273,22 +273,36 @@ def _triage_answer(
     This function itself never raises.
     """
     try:
-        chunks = [] if _is_smalltalk(user_content) else rag.search(user_content, k=4)
+        # Retrieval failing (query embedding needs the Gemini key — its quota
+        # can die) must NOT kill the tier: degrade to no sources and let the
+        # Groq/Gemini answer engines still respond.
+        try:
+            chunks = [] if _is_smalltalk(user_content) else rag.search(user_content, k=4)
+        except Exception:
+            chunks = []
         system_prompt = prompts.build_system_prompt(profile_ctx, chunks, chat_type)
         contents = _build_contents(history, user_content)
 
-        try:
-            raw = _call_groq_triage(system_prompt, contents)
-            return _parse_triage_json(raw, chunks), "groq"
-        except Exception:
-            pass  # Groq burst/outage — try Gemini below.
+        # Groq token-per-day quotas are PER MODEL (measured live: 120b hit
+        # its 200k TPD while 20b kept answering) — so try a chain of models,
+        # each with its own separate daily budget.
+        groq_chain = [GROQ_TRIAGE_MODEL, GROQ_SMALLTALK_MODEL, "qwen/qwen3.6-27b"]
+        for groq_model in dict.fromkeys(groq_chain):
+            try:
+                raw = _call_groq_triage(system_prompt, contents, model=groq_model)
+                return _parse_triage_json(raw, chunks), f"groq:{groq_model.split('/')[-1]}"
+            except Exception as exc:
+                # Never log user content — engine + error class/message only.
+                print(f"[router] triage {groq_model} failed: {type(exc).__name__}: {str(exc)[:160]}")
 
         try:
             raw = _call_gemini(system_prompt, contents)
             return _parse_triage_json(raw, chunks), "gemini-fallback"
-        except Exception:
+        except Exception as exc:
+            print(f"[router] triage gemini failed: {type(exc).__name__}: {exc}")
             return _fallback(), "fallback"
-    except Exception:
+    except Exception as exc:
+        print(f"[router] triage setup failed: {type(exc).__name__}: {exc}")
         return _fallback(), "fallback"
 
 

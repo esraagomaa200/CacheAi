@@ -30,3 +30,6 @@ frontend/playwright-report/
 
 # local git worktrees
 .worktrees/
+
+# TTS voice audition samples (local only)
+voice-samples/

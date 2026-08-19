@@ -12,6 +12,7 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
+import LiveCall from "../components/LiveCall";
 import SideBar from "../components/SideBar";
 import {
   getAccessToken,
@@ -20,6 +21,7 @@ import {
   sendMessage,
   respondEvent,
   escalateEvent,
+  fetchTtsBlob,
 } from "../lib/api";
 import { getApiErrorKey } from "../i18n/api-error";
 import { getFormattingLocale } from "../i18n/language";
@@ -85,7 +87,18 @@ function Chat() {
   const [escalating, setEscalating] = useState(false);
 
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  // Full-duplex live voice call — an overlay, fully independent of the
+  // typed/dictated message flow below.
+  const [showLiveCall, setShowLiveCall] = useState(false);
   const recognitionRef = useRef(null);
+  // Voice conversation: replies to voice-initiated messages are spoken aloud
+  // (Egyptian TTS via the backend); typed messages stay silent.
+  const audioRef = useRef(null);
+  const finalTranscriptRef = useRef("");
+  // Auto-send after a natural pause instead of the browser cutting the mic
+  // mid-thought: each new result resets this timer.
+  const silenceTimerRef = useRef(null);
   const bottomRef = useRef(null);
   const emergencyInitDone = useRef(false);
   // Session ids created by our own send flow: the load effect must not refetch
@@ -305,8 +318,36 @@ function Chat() {
   /* SEND MESSAGE */
   /* ================================================= */
 
-  async function handleSend() {
-    const content = input.trim();
+  async function speakReply(text) {
+    const blob = await fetchTtsBlob(text);
+    if (!blob) {
+      return;
+    }
+    try {
+      audioRef.current?.pause();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setSpeaking(true);
+      audio.onended = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play();
+    } catch {
+      setSpeaking(false);
+    }
+  }
+
+  async function handleSend(contentArg, options = {}) {
+    // Button onClick passes the click event — only trust real strings.
+    const source = typeof contentArg === "string" ? contentArg : input;
+    const content = source.trim();
+    const speakBack = Boolean(options.voice);
 
     if (!content || sending || initializing) {
       return;
@@ -366,6 +407,11 @@ function Chat() {
       // The server auto-titles the session from the first message AFTER this
       // request — nudge the sidebar to refetch, or it shows "New Chat" forever.
       window.dispatchEvent(new Event("najda:sessions-refresh"));
+
+      if (speakBack && res.assistant_message?.content) {
+        // Fire-and-forget: voice reply plays when ready, text is already shown.
+        speakReply(res.assistant_message.content);
+      }
     } catch (err) {
       console.error("Failed to send chat message:", err);
       setError(getApiErrorKey(err instanceof Error ? err.message : ""));
@@ -397,10 +443,17 @@ function Chat() {
       return;
     }
 
+    // Starting a new voice turn interrupts any reply still being spoken.
+    audioRef.current?.pause();
+    setSpeaking(false);
+    finalTranscriptRef.current = "";
+
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "ar-EG";
     recognition.interimResults = true;
-    recognition.continuous = false;
+    // Keep listening through natural mid-sentence pauses — the browser's
+    // default single-utterance mode cuts the mic "on its own" (user report).
+    recognition.continuous = true;
 
     recognition.onresult = (event) => {
       let transcript = "";
@@ -410,14 +463,37 @@ function Chat() {
       }
 
       setInput(transcript);
+      finalTranscriptRef.current = transcript;
+
+      // ~3s of silence after the last heard words = the turn is over → stop,
+      // which fires onend and auto-sends. Each new result resets the clock.
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          /* already stopped */
+        }
+      }, 3000);
     };
 
     recognition.onerror = () => {
+      clearTimeout(silenceTimerRef.current);
+      finalTranscriptRef.current = "";
       setListening(false);
     };
 
     recognition.onend = () => {
+      clearTimeout(silenceTimerRef.current);
       setListening(false);
+      // Voice conversation: the finished utterance sends itself, and the
+      // reply comes back as spoken Egyptian audio + text in the thread.
+      const spoken = finalTranscriptRef.current.trim();
+      finalTranscriptRef.current = "";
+      if (spoken) {
+        setInput("");
+        handleSend(spoken, { voice: true });
+      }
     };
 
     recognitionRef.current = recognition;
@@ -490,13 +566,28 @@ function Chat() {
                 : t("chat.newTitle")}
           </h1>
 
-          <button
-            className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50"
-            aria-label={t("chat.moreOptions")}
-          >
-            <LuEllipsis size={22} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowLiveCall(true)}
+              title={t("chat.startLiveCall")}
+              aria-label={t("chat.startLiveCall")}
+              className="rounded-full p-2 text-[19px] leading-none transition hover:bg-gray-50"
+            >
+              📞
+            </button>
+
+            <button
+              type="button"
+              className="rounded-full p-2 text-[#233B43] transition hover:bg-gray-50"
+              aria-label={t("chat.moreOptions")}
+            >
+              <LuEllipsis size={22} />
+            </button>
+          </div>
         </header>
+
+        {showLiveCall && <LiveCall onClose={() => setShowLiveCall(false)} />}
 
         {/* Countdown / Escalated card */}
         {isEmergencyMode &&
@@ -690,6 +781,12 @@ function Chat() {
         {/* Message Input */}
         <div className="border-t border-gray-100 bg-white px-5 py-5">
           <div className="mx-auto max-w-[850px]">
+            {speaking && (
+              <div className="mb-2 flex items-center justify-center gap-2 text-[12px] font-medium text-[#1AA681]">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#1AA681]" />
+                {t("chat.speaking")} 🔊
+              </div>
+            )}
             <div className="flex items-center gap-3 rounded-[14px] border border-[#54C9AB] bg-white px-4 py-2 shadow-[0_3px_15px_rgba(0,0,0,0.03)]">
               <input
                 type="text"

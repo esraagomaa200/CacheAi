@@ -163,6 +163,8 @@ const en = {
     sendMessage: "Send message",
     startVoice: "Start voice input",
     stopVoice: "Stop voice input",
+    startLiveCall: "Start voice call",
+    speaking: "Najda is speaking...",
     source: "Source",
     assistantLogoAlt: "NajdaAI assistant",
     riskLevel: "Risk level",
@@ -187,6 +189,29 @@ const en = {
       send: "Unable to send the message.",
       escalate: "Unable to escalate the emergency. We’ll try again.",
       respond: "Unable to record your response.",
+    },
+  },
+  liveCall: {
+    title: "Voice call with Najda",
+    status: {
+      connecting: "Connecting…",
+      connected: "Connected 🎙️",
+      reconnecting: "Reconnecting…",
+      ended: "Call ended",
+      error: "Call failed",
+    },
+    readyPrompt: "Speak normally — Najda is listening and will reply by voice.",
+    preparing: "Preparing the call…",
+    close: "Close",
+    end: "End call",
+    disclaimer:
+      "Najda is not a doctor and does not diagnose — if symptoms are severe, call emergency services at 123.",
+    errors: {
+      microphone:
+        "We couldn't access the microphone. Allow microphone access in your browser settings and try again.",
+      sessionExpired: "Your session ended. Sign in again and start a new call.",
+      audioSetup:
+        "We couldn't set up audio in this browser. Try another browser or update it.",
     },
   },
   profile: {

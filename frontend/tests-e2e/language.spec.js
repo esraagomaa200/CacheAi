@@ -193,6 +193,9 @@ test("translates authenticated page families while preserving dynamic content", 
 
   await page.goto("/chat");
   await expect(page.getByPlaceholder("اكتب رسالتك...")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "بدء مكالمة صوتية" })
+  ).toBeVisible();
 
   await page.goto("/emergency");
   await expect(
