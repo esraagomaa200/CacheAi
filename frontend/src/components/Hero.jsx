@@ -2,6 +2,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import robot from "../assets/images/robot.png";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   apiFetch,
   clearAccessToken,
@@ -10,6 +11,7 @@ import {
 
 function Hero() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [checkingAuth, setCheckingAuth] = useState(false);
 
   const handleStartChatting = async () => {
@@ -45,22 +47,16 @@ function Hero() {
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/70 px-4 py-2">
             <Sparkles size={16} strokeWidth={2} className="text-emerald-500" />
             <span className="text-sm font-semibold text-emerald-600">
-              Your AI Health Assistant
+              {t("home.badge")}
             </span>
           </div>
 
           <h1 className="max-w-[600px] text-5xl font-bold leading-[1.08] tracking-[-1.5px] text-[#0B2028] md:text-6xl">
-            Smart Healthcare,
-            <br />
-            Anytime, Anywhere
+            {t("home.title")}
           </h1>
 
           <p className="mt-6 max-w-[520px] text-[17px] leading-7 text-[#40545C]">
-            NajdaAI is your intelligent medical assistant.
-            <br />
-            Ask questions, describe symptoms, and get
-            <br />
-            reliable health information in seconds.
+            {t("home.description")}
           </p>
 
           <div className="mt-8 flex items-center gap-5">
@@ -69,7 +65,7 @@ function Hero() {
               disabled={checkingAuth}
               className="group flex items-center gap-4 rounded-xl bg-[#19A878] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#15966B] hover:shadow-lg disabled:cursor-wait disabled:opacity-70"
             >
-              {checkingAuth ? "Checking..." : "Start Chatting"}
+              {checkingAuth ? t("common.checking") : t("home.startChatting")}
               <ArrowRight
                 size={19}
                 className="transition-transform duration-300 group-hover:translate-x-1"
@@ -80,7 +76,7 @@ function Hero() {
               onClick={() => navigate("/emergency-auth")}
               className="flex items-center gap-3 rounded-xl border border-[#D8E1E1] bg-[#fd5d5d] px-6 py-3.5 text-[15px] font-semibold text-[#18323A] transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50"
             >
-              Emergency
+              {t("home.emergency")}
             </button>
           </div>
         </div>
@@ -89,7 +85,7 @@ function Hero() {
           <div className="absolute h-[440px] w-[440px] rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 blur-sm" />
           <img
             src={robot}
-            alt="NajdaAI AI Health Assistant"
+            alt={t("home.imageAlt")}
             className="relative z-10 w-[440px] object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.08)]"
           />
           <span className="absolute right-8 top-16 h-2 w-2 rounded-full bg-emerald-400" />

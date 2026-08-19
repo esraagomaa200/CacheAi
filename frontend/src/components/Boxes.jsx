@@ -3,36 +3,36 @@ import {
   LuMic,
   LuShieldCheck,
 } from "react-icons/lu";
+import { useTranslation } from "react-i18next";
 
 const features = [
   {
     icon: LuMessageCircleMore,
-    title: "AI-Powered Answers",
-    description: "Get accurate, evidence-based medical information.",
+    key: "answers",
   },
   {
     icon: LuMic,
-    title: "Voice Interaction",
-    description: "Talk to NajdaAI using your voice in Arabic or English.",
+    key: "voice",
   },
   {
     icon: LuShieldCheck,
-    title: "Private & Secure",
-    description: "Your conversations are encrypted and safe.",
+    key: "privacy",
   },
 ];
 
 function Boxes() {
+  const { t } = useTranslation();
+
   return (
     <section className="w-full bg-white px-8 py-12">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-3">
         
-        {features.map((feature, index) => {
+        {features.map((feature) => {
           const Icon = feature.icon;
 
           return (
             <div
-              key={index}
+              key={feature.key}
               className="
                 flex
                 min-h-[175px]
@@ -72,12 +72,12 @@ function Boxes() {
 
               {/* Title */}
               <h3 className="text-[16px] font-bold text-[#142B34]">
-                {feature.title}
+                {t(`home.features.${feature.key}.title`)}
               </h3>
 
               {/* Description */}
               <p className="mt-3 max-w-[250px] text-[13px] leading-5 text-[#53666D]">
-                {feature.description}
+                {t(`home.features.${feature.key}.description`)}
               </p>
             </div>
           );

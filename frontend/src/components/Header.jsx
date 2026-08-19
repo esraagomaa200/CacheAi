@@ -6,6 +6,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import logo2 from "../assets/icons/Logo2.png";
 import {
@@ -13,10 +14,11 @@ import {
   clearAccessToken,
   getAccessToken,
 } from "../lib/api";
-import ThemeToggle from "./ThemeToggle";
+import AppearanceControls from "./AppearanceControls";
 
 function Header() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const dropdownRef = useRef(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -82,8 +84,8 @@ function Header() {
     navigate("/");
   };
 
-  const userName = user?.name || user?.email?.split("@")[0] || "User";
-  const userEmail = user?.email || "No active account";
+  const userName = user?.name || user?.email?.split("@")[0] || t("common.user");
+  const userEmail = user?.email || t("common.noActiveAccount");
 
   return (
     <header className="w-full border-b border-gray-100 bg-white">
@@ -107,19 +109,19 @@ function Header() {
             to="/"
             className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
           >
-            Home
+            {t("navigation.home")}
           </Link>
         </nav>
 
         {/* Right Side */}
         <div className="flex items-center gap-5">
-          <ThemeToggle />
+          <AppearanceControls compact />
 
           {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
               type="button"
-              aria-label="Open user menu"
+              aria-label={t("common.openUserMenu")}
               aria-expanded={isOpen}
               aria-haspopup="menu"
               onClick={() => setIsOpen((previous) => !previous)}
@@ -173,7 +175,7 @@ function Header() {
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium text-[#19323A] transition-colors hover:bg-[#F1FAF7] hover:text-[#15966B]"
                     >
                       <Settings size={17} />
-                      Edit Profile
+                      {t("common.editProfile")}
                     </button>
 
                     <button
@@ -183,12 +185,12 @@ function Header() {
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium text-[#C24141] transition-colors hover:bg-red-50"
                     >
                       <LogOut size={17} />
-                      Logout
+                      {t("common.logout")}
                     </button>
                   </div>
                 ) : (
                   <div className="px-4 py-3 text-[12px] leading-5 text-[#718087]">
-                    Please sign up or log in to view your profile.
+                    {t("common.noActiveAccount")}
                   </div>
                 )}
               </div>
