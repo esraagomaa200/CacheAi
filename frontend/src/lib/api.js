@@ -145,3 +145,24 @@ export function profileFormToBackendPayload(formData, chronicDiseases) {
     emergency_email: formData.emergencyEmail?.trim() || null,
   };
 }
+
+// Voice-conversation TTS: returns a playable audio Blob (WAV) for the given
+// text, or null when synthesis is unavailable — callers stay silent then.
+export async function fetchTtsBlob(text) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+      body: JSON.stringify({ text }),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.blob();
+  } catch {
+    return null;
+  }
+}

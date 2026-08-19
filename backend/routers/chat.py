@@ -299,3 +299,31 @@ def get_session_messages(
     ).order_by(Message.id.asc()).all()
 
     return {"messages": [_serialize_message(message) for message in messages]}
+
+
+# ==========================================
+# Text-to-Speech (Egyptian Arabic via Gemini Live API)
+# ==========================================
+
+@router.post("/tts")
+def synthesize_speech(
+    data: dict = Body(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Speak an assistant reply out loud — used by the voice-conversation
+    mode in the chat UI. Returns audio/wav (PCM 24kHz mono) or 503 when
+    synthesis is unavailable (frontend degrades to silent text)."""
+    from fastapi import Response
+
+    from ai import tts
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="text is required")
+
+    # Keep utterances bounded — long clinical answers get their lead-in only.
+    wav = tts.synthesize(text[:600])
+    if not wav:
+        raise HTTPException(status_code=503, detail="TTS unavailable")
+
+    return Response(content=wav, media_type="audio/wav")

@@ -19,6 +19,7 @@ import {
   sendMessage,
   respondEvent,
   escalateEvent,
+  fetchTtsBlob,
 } from "../lib/api";
 
 const RISK_LABELS = {
@@ -77,7 +78,12 @@ function Chat() {
   const [escalating, setEscalating] = useState(false);
 
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const recognitionRef = useRef(null);
+  // Voice conversation: replies to voice-initiated messages are spoken aloud
+  // (Egyptian TTS via the backend); typed messages stay silent.
+  const audioRef = useRef(null);
+  const finalTranscriptRef = useRef("");
   const bottomRef = useRef(null);
   const emergencyInitDone = useRef(false);
   // Session ids created by our own send flow: the load effect must not refetch
@@ -293,8 +299,36 @@ function Chat() {
   /* SEND MESSAGE */
   /* ================================================= */
 
-  async function handleSend() {
-    const content = input.trim();
+  async function speakReply(text) {
+    const blob = await fetchTtsBlob(text);
+    if (!blob) {
+      return;
+    }
+    try {
+      audioRef.current?.pause();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setSpeaking(true);
+      audio.onended = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play();
+    } catch {
+      setSpeaking(false);
+    }
+  }
+
+  async function handleSend(contentArg, options = {}) {
+    // Button onClick passes the click event — only trust real strings.
+    const source = typeof contentArg === "string" ? contentArg : input;
+    const content = source.trim();
+    const speakBack = Boolean(options.voice);
 
     if (!content || sending || initializing) {
       return;
@@ -354,6 +388,11 @@ function Chat() {
       // The server auto-titles the session from the first message AFTER this
       // request — nudge the sidebar to refetch, or it shows "New Chat" forever.
       window.dispatchEvent(new Event("najda:sessions-refresh"));
+
+      if (speakBack && res.assistant_message?.content) {
+        // Fire-and-forget: voice reply plays when ready, text is already shown.
+        speakReply(res.assistant_message.content);
+      }
     } catch (err) {
       setError(err.message || "تعذر إرسال الرسالة.");
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
@@ -384,6 +423,11 @@ function Chat() {
       return;
     }
 
+    // Starting a new voice turn interrupts any reply still being spoken.
+    audioRef.current?.pause();
+    setSpeaking(false);
+    finalTranscriptRef.current = "";
+
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "ar-EG";
     recognition.interimResults = true;
@@ -397,14 +441,24 @@ function Chat() {
       }
 
       setInput(transcript);
+      finalTranscriptRef.current = transcript;
     };
 
     recognition.onerror = () => {
+      finalTranscriptRef.current = "";
       setListening(false);
     };
 
     recognition.onend = () => {
       setListening(false);
+      // Voice conversation: the finished utterance sends itself, and the
+      // reply comes back as spoken Egyptian audio + text in the thread.
+      const spoken = finalTranscriptRef.current.trim();
+      finalTranscriptRef.current = "";
+      if (spoken) {
+        setInput("");
+        handleSend(spoken, { voice: true });
+      }
     };
 
     recognitionRef.current = recognition;
@@ -646,6 +700,12 @@ function Chat() {
         {/* Message Input */}
         <div className="border-t border-gray-100 bg-white px-5 py-5">
           <div className="mx-auto max-w-[850px]">
+            {speaking && (
+              <div className="mb-2 flex items-center justify-center gap-2 text-[12px] font-medium text-[#1AA681]">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#1AA681]" />
+                نجدة بيتكلم... 🔊
+              </div>
+            )}
             <div className="flex items-center gap-3 rounded-[14px] border border-[#54C9AB] bg-white px-4 py-2 shadow-[0_3px_15px_rgba(0,0,0,0.03)]">
               <input
                 type="text"
