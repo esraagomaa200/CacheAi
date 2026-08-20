@@ -15,6 +15,9 @@ venv/
 backend/qdrant_data/
 data/qdrant_local/
 *.pkl
+# … except the BM25 index: app/retrieval.py refuses to boot without it,
+# and rebuilding it (build_index.py) re-embeds the whole corpus.
+!data/bm25.pkl
 
 # databases
 backend/*.db
