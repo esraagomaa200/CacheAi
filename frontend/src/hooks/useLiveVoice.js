@@ -100,6 +100,8 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
     turnCompleteRef.current = onTurnComplete;
   }, [onStatus, onTranscript, onTurnComplete]);
 
+  const [lastError, setLastError] = useState("");
+
   const setStatusBoth = useCallback((value) => {
     setStatus(value);
     statusRef.current?.(value);
@@ -433,6 +435,7 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
         await pc1.setRemoteDescription(answer);
 
         const remoteStream = await trackReady;
+        console.info("[live] loopback ready");
         const audioEl = new Audio();
         audioEl.autoplay = true;
         audioEl.srcObject = remoteStream;
@@ -458,17 +461,20 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
               wasm: ortWasmUrl,
             };
           },
-          positiveSpeechThreshold: SPEECH_THRESHOLD,
+          positiveSpeechThreshold: SPEECH_OPEN_THRESHOLD,
           onFrameProcessed: handleVadFrame,
         });
         vadRef.current = vad;
         vad.start();
+        console.info("[live] vad ready");
 
         connectSocket();
+        console.info("[live] ws connecting");
       } catch (err) {
         console.error("live voice start failed:", err);
         teardown();
         userEndedRef.current = true;
+        setLastError(`${err?.name || "Error"}: ${String(err?.message || err).slice(0, 140)}`);
         setStatusBoth(
           err?.name === "NotAllowedError" || err?.name === "NotFoundError"
             ? "mic-denied"
@@ -481,5 +487,5 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
 
   useEffect(() => teardown, [teardown]);
 
-  return { status, start, hangUp };
+  return { status, start, hangUp, lastError };
 }

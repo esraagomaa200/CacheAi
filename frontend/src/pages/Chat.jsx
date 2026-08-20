@@ -136,6 +136,7 @@ function Chat() {
     status: liveStatus,
     start: startLive,
     hangUp: endLive,
+    lastError: liveLastError,
   } = useLiveVoice({
     onTranscript: handleLiveTranscript,
     onTurnComplete: sealLiveBubbles,
@@ -854,6 +855,11 @@ function Chat() {
             {liveStatus === "error" && (
               <div className="mb-2 text-center text-[12px] font-medium text-red-600">
                 {t("liveCall.errors.audioSetup")}
+                {liveLastError && (
+                  <span dir="ltr" className="mt-1 block text-[10px] text-red-400">
+                    {liveLastError}
+                  </span>
+                )}
               </div>
             )}
             {liveActive && (
