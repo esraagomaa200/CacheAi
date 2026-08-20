@@ -9,6 +9,7 @@ const en = {
   },
   navigation: {
     home: "Home",
+    about: "About Us",
     chat: "Chat",
     profile: "Profile",
     history: "History",
@@ -375,10 +376,72 @@ const en = {
       aiPowered: "AI-Powered",
       everyone: "For Everyone",
     },
-    imageAlt: "Healthcare professional",
+    imageAlt: "Najda assistant",
     card: "Better Information. Healthier Decisions.",
     chatDecoration: "Chat illustration",
     leavesDecoration: "Decorative leaves",
+    whyTitle: "Why Najda?",
+    whyIntro:
+      "Najda deliberately focuses on three conditions where every minute changes the outcome — and where the decision made at home decides everything.",
+    conditions: {
+      stroke: {
+        title: "Stroke",
+        desc: "Recognizing face drooping, arm weakness, or slurred speech early can save the brain — the treatment window is just a few hours.",
+      },
+      heart: {
+        title: "Heart symptoms",
+        desc: "Chest pain, pressure, or shortness of breath — Najda helps you tell an emergency from something that can wait.",
+      },
+      breathing: {
+        title: "Breathing difficulty",
+        desc: "From asthma attacks to choking — clear first-aid steps in plain language, until help arrives.",
+      },
+    },
+    timeNote:
+      "85% of cardiovascular deaths are caused by exactly two events — heart attack and stroke. In both, time is the treatment, and the decision made at home determines the outcome.",
+    sourceNote:
+      "Sources: World Health Organization, CVD fact sheet (2025) · World Stroke Organization, Global Stroke Fact Sheet (2025).",
+    howTitle: "How Najda works",
+    steps: {
+      talk: {
+        title: "Talk the way you talk",
+        desc: "Type, speak, or start a live voice call — in Egyptian Arabic or English. No app to install, just a link.",
+      },
+      assess: {
+        title: "Grounded assessment",
+        desc: "Answers are built on documented medical sources (WHO, AHA/ASA, NHS, CDC) with citations — not guesses.",
+      },
+      escalate: {
+        title: "Real emergency mode",
+        desc: "If risk is high: a countdown starts, and if you don't confirm you're okay, your emergency contact is alerted automatically.",
+      },
+    },
+    safetyTitle: "Safety and limits",
+    safetyBody:
+      "Najda is a first-response triage assistant — it is not a doctor and never replaces one. It doesn't diagnose or prescribe; it helps you decide how urgent things are and gets you to the right care sooner.",
+    safetyEmergency:
+      "In a life-threatening emergency, always call the ambulance first: 123 (Egypt).",
+    teamTitle: "The team",
+    teamIntro:
+      "Najda is built by a small team, each owning a full layer of the product.",
+    team: {
+      uiux: {
+        role: "UI/UX & Database",
+        desc: "The bilingual interface, dark mode, and the data model behind profiles, chats, and emergency events.",
+      },
+      fullstack: {
+        role: "Backend & Frontend",
+        desc: "The FastAPI platform, authentication, the emergency state machine, and the React experience.",
+      },
+      ai: {
+        role: "AI Agent",
+        desc: "The triage brain: model routing, medical RAG with citations, live Egyptian voice, and risk classification.",
+      },
+    },
+    ctaTitle: "Try Najda now",
+    ctaBody:
+      "One conversation can teach you the warning signs — before you ever need them.",
+    ctaButton: "Start chatting",
   },
   errors: {
     requiredName: "Enter your full name",

@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import Home from "./pages/Home";
+import About from "./pages/About";
 import Chat from "./pages/Chat";
 import SignUp from "./pages/SignUp";
 import EmergencyMode from "./pages/EmergencyMode";
@@ -28,6 +29,7 @@ function App() {
        
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />

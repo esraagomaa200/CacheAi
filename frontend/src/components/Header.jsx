@@ -112,6 +112,12 @@ function Header() {
           >
             {t("navigation.home")}
           </Link>
+          <Link
+            to="/about"
+            className="text-[14px] font-medium text-[#172B34] transition-colors duration-200 hover:text-[#27B58A]"
+          >
+            {t("navigation.about")}
+          </Link>
         </nav>
 
         {/* Right Side */}
