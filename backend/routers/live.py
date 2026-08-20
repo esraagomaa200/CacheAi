@@ -271,53 +271,74 @@ async def _pump_gemini_to_browser(
     Attribute names verified against the installed google-genai 2.18.1
     types (LiveServerContent.input_transcription / output_transcription /
     interrupted / turn_complete), not guessed.
+
+    ⚠️ session.receive() is an async iterator that COMPLETES at each turn
+    boundary — a single `async for` made the server close the call after
+    every reply (measured: clean close code 1000 right after turn_complete,
+    forcing a client reconnect per turn). The outer while restarts the
+    iterator so one connection carries the whole conversation.
     """
-    async for message in session.receive():
-        # PCM16 mono 24kHz. Straight through — the browser schedules it.
-        if message.data:
-            await ws.send_bytes(message.data)
+    while True:
+        got_message = False
+        async for message in session.receive():
+            got_message = True
+            await _relay_server_message(ws, message, recorder)
+        if not got_message:
+            # The generator completing empty means the Gemini session itself
+            # is over (time limit / server close) — let the reconnect logic
+            # upstream take it from here.
+            return
 
-        server_content = getattr(message, "server_content", None)
-        if server_content is None:
-            continue
 
-        # Barge-in first: the browser must drop its queued audio before it
-        # gets any newer audio, otherwise the interrupted reply keeps
-        # playing over the fresh one. The cut-off partial reply is still a
-        # thing the user heard — persist it before the next turn begins.
-        if getattr(server_content, "interrupted", False):
-            await ws.send_json({"type": "interrupted"})
-            await recorder.flush()
+async def _relay_server_message(
+    ws: WebSocket, message, recorder: TranscriptRecorder
+) -> None:
+    """Forward one Gemini server message to the browser + the recorder."""
+    # PCM16 mono 24kHz. Straight through — the browser schedules it.
+    if message.data:
+        await ws.send_bytes(message.data)
 
-        user_text = getattr(server_content, "input_transcription", None)
-        if user_text is not None and user_text.text:
-            recorder.add_user(user_text.text)
-            await ws.send_json(
-                {
-                    "type": "transcript",
-                    "role": "user",
-                    "text": user_text.text,
-                    "final": bool(getattr(user_text, "finished", False)),
-                }
-            )
+    server_content = getattr(message, "server_content", None)
+    if server_content is None:
+        return
 
-        model_text = getattr(server_content, "output_transcription", None)
-        if model_text is not None and model_text.text:
-            recorder.add_assistant(model_text.text)
-            await ws.send_json(
-                {
-                    "type": "transcript",
-                    "role": "assistant",
-                    "text": model_text.text,
-                    "final": bool(getattr(model_text, "finished", False)),
-                }
-            )
+    # Barge-in first: the browser must drop its queued audio before it
+    # gets any newer audio, otherwise the interrupted reply keeps
+    # playing over the fresh one. The cut-off partial reply is still a
+    # thing the user heard — persist it before the next turn begins.
+    if getattr(server_content, "interrupted", False):
+        await ws.send_json({"type": "interrupted"})
+        await recorder.flush()
 
-        # Transcriptions stream as deltas; this is the boundary the client
-        # uses to seal a bubble instead of appending forever.
-        if getattr(server_content, "turn_complete", False):
-            await ws.send_json({"type": "turn_complete"})
-            await recorder.flush()
+    user_text = getattr(server_content, "input_transcription", None)
+    if user_text is not None and user_text.text:
+        recorder.add_user(user_text.text)
+        await ws.send_json(
+            {
+                "type": "transcript",
+                "role": "user",
+                "text": user_text.text,
+                "final": bool(getattr(user_text, "finished", False)),
+            }
+        )
+
+    model_text = getattr(server_content, "output_transcription", None)
+    if model_text is not None and model_text.text:
+        recorder.add_assistant(model_text.text)
+        await ws.send_json(
+            {
+                "type": "transcript",
+                "role": "assistant",
+                "text": model_text.text,
+                "final": bool(getattr(model_text, "finished", False)),
+            }
+        )
+
+    # Transcriptions stream as deltas; this is the boundary the client
+    # uses to seal a bubble instead of appending forever.
+    if getattr(server_content, "turn_complete", False):
+        await ws.send_json({"type": "turn_complete"})
+        await recorder.flush()
 
 
 async def _run_call(ws: WebSocket, recorder: TranscriptRecorder) -> None:
