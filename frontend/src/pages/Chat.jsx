@@ -16,6 +16,7 @@ import SideBar from "../components/SideBar";
 import ProfileReminderBanner from "../components/ProfileReminderBanner";
 import useEmergencyContactGate from "../hooks/useEmergencyContactGate";
 import useLiveVoice from "../hooks/useLiveVoice";
+import useOnboardingTour from "../hooks/useOnboardingTour";
 import {
   getAccessToken,
   createSession,
@@ -86,6 +87,10 @@ function Chat() {
   const [countdown, setCountdown] = useState(null);
   const [contact, setContact] = useState(null);
   const [escalating, setEscalating] = useState(false);
+
+  // First-visit walkthrough — never over an emergency (someone asking for
+  // help must not be interrupted by a tutorial).
+  useOnboardingTour({ enabled: !isEmergencyMode && !emergencyEvent });
 
   // In-chat live voice conversation: the mic button opens a full-duplex
   // call whose transcripts land as regular bubbles in THIS thread (and the
@@ -868,7 +873,10 @@ function Chat() {
                 {t("liveCall.readyPrompt")} 🎙️
               </div>
             )}
-            <div className="flex items-center gap-3 rounded-[14px] border border-[#54C9AB] bg-white px-4 py-2 shadow-[0_3px_15px_rgba(0,0,0,0.03)]">
+            <div
+              data-tour="composer"
+              className="flex items-center gap-3 rounded-[14px] border border-[#54C9AB] bg-white px-4 py-2 shadow-[0_3px_15px_rgba(0,0,0,0.03)]"
+            >
               <input
                 type="text"
                 dir="auto"
@@ -881,6 +889,7 @@ function Chat() {
 
               <button
                 type="button"
+                data-tour="mic"
                 onClick={toggleLiveVoice}
                 title={liveActive ? t("liveCall.end") : t("chat.startLiveCall")}
                 aria-label={liveActive ? t("liveCall.end") : t("chat.startLiveCall")}

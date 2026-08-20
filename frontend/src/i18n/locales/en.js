@@ -443,6 +443,37 @@ const en = {
       "One conversation can teach you the warning signs — before you ever need them.",
     ctaButton: "Start chatting",
   },
+  tour: {
+    next: "Next",
+    prev: "Back",
+    done: "Let's start",
+    steps: {
+      newChat: {
+        title: "Start here 👋",
+        desc: "This button starts a fresh conversation with Najda any time.",
+      },
+      composer: {
+        title: "Talk like you talk",
+        desc: "Type your symptoms in plain Egyptian Arabic or English — Najda understands you and answers from trusted medical sources.",
+      },
+      mic: {
+        title: "Live voice call 🎙️",
+        desc: "Tap the mic to start a live call — speak naturally and Najda talks back. Say \"bye bye\" to hang up.",
+      },
+      history: {
+        title: "Your conversations",
+        desc: "Every chat is saved here so you can come back to it.",
+      },
+      profile: {
+        title: "Your profile",
+        desc: "Keep your emergency contact up to date — that's who we alert if something happens.",
+      },
+      emergencyCard: {
+        title: "Emergency mode 🚨",
+        desc: "If Najda detects danger, a countdown starts automatically — if you don't confirm you're okay, your emergency contact is notified. In a life-threatening situation always call 123 first.",
+      },
+    },
+  },
   errors: {
     requiredName: "Enter your full name",
     requiredEmail: "Enter your email",

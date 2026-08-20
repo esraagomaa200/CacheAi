@@ -24,6 +24,7 @@ def _profile_response(user: User, db: Session) -> dict:
             "name": user.name,
             "email": user.email,
             "auth_provider": user.auth_provider,
+            "has_seen_tour": bool(user.has_seen_tour),
         },
         "patient_profile": {
             "patient_id": patient.patient_id if patient else None,
@@ -161,6 +162,16 @@ def update_emergency_contact(
             "email": contact.email,
         },
     }
+
+
+@router.post("/tour-seen")
+def mark_tour_seen(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current_user.has_seen_tour = True
+    db.commit()
+    return {"status": "ok"}
 
 
 @router.delete("/emergency-contact", status_code=status.HTTP_204_NO_CONTENT)

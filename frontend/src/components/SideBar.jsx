@@ -157,6 +157,7 @@ function SideBar() {
 
       {/* New Chat */}
       <button
+        data-tour="new-chat"
         onClick={() => navigateFromSidebar("/chat")}
         className="
           mb-5
@@ -192,7 +193,10 @@ function SideBar() {
           {t("navigation.chatHistory")}
         </div>
 
-        <div className="flex max-h-[220px] flex-col gap-1 overflow-y-auto pr-1">
+        <div
+          data-tour="history"
+          className="flex max-h-[220px] flex-col gap-1 overflow-y-auto pr-1"
+        >
 
           {loadingSessions && (
             <p className="px-3 py-2 text-[12px] text-[#8FA0A5]">
@@ -249,11 +253,13 @@ function SideBar() {
 
         </div>
 
-        <SidebarItem
-          icon={<LuUserRound />}
-          label={t("navigation.profile")}
-          onClick={() => navigateFromSidebar("/profile")}
-        />
+        <div data-tour="profile">
+          <SidebarItem
+            icon={<LuUserRound />}
+            label={t("navigation.profile")}
+            onClick={() => navigateFromSidebar("/profile")}
+          />
+        </div>
 
       </nav>
 
@@ -293,6 +299,7 @@ function SideBar() {
 
         {/* Emergency Card */}
         <div
+          data-tour="emergency-card"
           className="
             rounded-[18px]
             border

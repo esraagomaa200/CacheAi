@@ -1,6 +1,6 @@
 from datetime import datetime, date
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, JSON, String, Text, TypeDecorator, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, TypeDecorator, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -47,6 +47,9 @@ class User(Base):
         unique=True,
         nullable=True
     )
+
+    # Onboarding tour shown once per account (not per browser).
+    has_seen_tour: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

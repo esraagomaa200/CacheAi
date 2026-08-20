@@ -16,6 +16,7 @@ COLUMN_DEFINITIONS = {
         "password_hash": "TEXT",
         "auth_provider": "VARCHAR(20) DEFAULT 'local'",
         "provider_id": "VARCHAR(255)",
+        "has_seen_tour": "BOOLEAN DEFAULT FALSE",
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
     },
@@ -46,6 +47,7 @@ COLUMN_DEFINITIONS = {
 
 BACKFILL_STATEMENTS = (
     ("users", "auth_provider", "'local'"),
+    ("users", "has_seen_tour", "FALSE"),
     ("users", "created_at", "CURRENT_TIMESTAMP"),
     ("users", "updated_at", "CURRENT_TIMESTAMP"),
     ("patient_profiles", "created_at", "CURRENT_TIMESTAMP"),

@@ -538,3 +538,66 @@ body {
 ) {
   box-shadow: var(--theme-shadow);
 }
+
+/* ============================================================
+   Onboarding tour (driver.js) — نجدة theme, both color modes.
+   The library's own stylesheet loads first (dynamic import in
+   useOnboardingTour), these overrides re-skin its popover.
+   ============================================================ */
+.driver-popover.najda-tour {
+  background-color: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  box-shadow: var(--theme-shadow);
+  max-width: 320px;
+}
+
+.driver-popover.najda-tour .driver-popover-title {
+  color: var(--theme-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.driver-popover.najda-tour .driver-popover-description {
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.driver-popover.najda-tour .driver-popover-progress-text {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.driver-popover.najda-tour button:not(.driver-popover-close-btn) {
+  background-color: var(--theme-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.driver-popover.najda-tour button:not(.driver-popover-close-btn):hover {
+  background-color: color-mix(in srgb, var(--theme-accent) 85%, #000000);
+}
+
+.driver-popover.najda-tour .driver-popover-close-btn {
+  color: var(--theme-text-muted);
+}
+
+.driver-popover.najda-tour .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--theme-surface-elevated);
+}
+.driver-popover.najda-tour .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--theme-surface-elevated);
+}
+.driver-popover.najda-tour .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--theme-surface-elevated);
+}
+.driver-popover.najda-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--theme-surface-elevated);
+}
