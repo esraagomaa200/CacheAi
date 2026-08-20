@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -12,10 +12,10 @@ import {
 } from "react-icons/lu";
 
 import logo2 from "../assets/icons/Logo2.png";
-import LiveCall from "../components/LiveCall";
 import SideBar from "../components/SideBar";
 import ProfileReminderBanner from "../components/ProfileReminderBanner";
 import useEmergencyContactGate from "../hooks/useEmergencyContactGate";
+import useLiveVoice from "../hooks/useLiveVoice";
 import {
   getAccessToken,
   createSession,
@@ -23,7 +23,6 @@ import {
   sendMessage,
   respondEvent,
   escalateEvent,
-  fetchTtsBlob,
 } from "../lib/api";
 import { getApiErrorKey } from "../i18n/api-error";
 import { getFormattingLocale } from "../i18n/language";
@@ -35,10 +34,7 @@ const RISK_LABELS = {
   emergency: "chat.risk.emergency",
 };
 
-const SpeechRecognitionCtor =
-  typeof window !== "undefined"
-    ? window.SpeechRecognition || window.webkitSpeechRecognition
-    : null;
+const LIVE_ACTIVE_STATUSES = ["connecting", "connected", "reconnecting"];
 
 function formatTime(dateString, language) {
   const date = dateString ? new Date(dateString) : new Date();
@@ -91,19 +87,9 @@ function Chat() {
   const [contact, setContact] = useState(null);
   const [escalating, setEscalating] = useState(false);
 
-  const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  // Full-duplex live voice call — an overlay, fully independent of the
-  // typed/dictated message flow below.
-  const [showLiveCall, setShowLiveCall] = useState(false);
-  const recognitionRef = useRef(null);
-  // Voice conversation: replies to voice-initiated messages are spoken aloud
-  // (Egyptian TTS via the backend); typed messages stay silent.
-  const audioRef = useRef(null);
-  const finalTranscriptRef = useRef("");
-  // Auto-send after a natural pause instead of the browser cutting the mic
-  // mid-thought: each new result resets this timer.
-  const silenceTimerRef = useRef(null);
+  // In-chat live voice conversation: the mic button opens a full-duplex
+  // call whose transcripts land as regular bubbles in THIS thread (and the
+  // backend persists them to the session — they're real chat history).
   // Emergency siren: a Web-Audio sweep + vibration that must be impossible
   // to miss while the "are you OK?" countdown is pending.
   const sirenRef = useRef(null);
@@ -114,7 +100,47 @@ function Chat() {
   // them, or the fetched copies race with the ones handleSend appends.
   const selfCreatedSession = useRef(null);
 
-  const speechSupported = Boolean(SpeechRecognitionCtor);
+  // Live voice engine (AEC loopback + neural VAD) — transcripts stream into
+  // the thread as live bubbles, sealed at each turn boundary.
+  const handleLiveTranscript = useCallback((role, text) => {
+    setMessages((prev) => {
+      const sender = role === "user" ? "user" : "assistant";
+      const last = prev[prev.length - 1];
+      if (last && last.live && !last.sealed && last.sender === sender) {
+        return [...prev.slice(0, -1), { ...last, content: last.content + text }];
+      }
+      return [
+        ...prev,
+        {
+          id: `live-${Date.now()}-${prev.length}`,
+          sender,
+          content: text,
+          created_at: new Date().toISOString(),
+          live: true,
+          sealed: false,
+        },
+      ];
+    });
+  }, []);
+
+  const sealLiveBubbles = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((m) => (m.live && !m.sealed ? { ...m, sealed: true } : m))
+    );
+    // The backend persists live transcripts and auto-titles the session —
+    // let the sidebar pick the title up.
+    window.dispatchEvent(new Event("najda:sessions-refresh"));
+  }, []);
+
+  const {
+    status: liveStatus,
+    start: startLive,
+    hangUp: endLive,
+  } = useLiveVoice({
+    onTranscript: handleLiveTranscript,
+    onTurnComplete: sealLiveBubbles,
+  });
+  const liveActive = LIVE_ACTIVE_STATUSES.includes(liveStatus);
 
   /* ================================================= */
   /* AUTH GUARD */
@@ -404,36 +430,10 @@ function Chat() {
   /* SEND MESSAGE */
   /* ================================================= */
 
-  async function speakReply(text) {
-    const blob = await fetchTtsBlob(text);
-    if (!blob) {
-      return;
-    }
-    try {
-      audioRef.current?.pause();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      setSpeaking(true);
-      audio.onended = () => {
-        setSpeaking(false);
-        URL.revokeObjectURL(url);
-      };
-      audio.onerror = () => {
-        setSpeaking(false);
-        URL.revokeObjectURL(url);
-      };
-      await audio.play();
-    } catch {
-      setSpeaking(false);
-    }
-  }
-
-  async function handleSend(contentArg, options = {}) {
+  async function handleSend(contentArg) {
     // Button onClick passes the click event — only trust real strings.
     const source = typeof contentArg === "string" ? contentArg : input;
     const content = source.trim();
-    const speakBack = Boolean(options.voice);
 
     if (!content || sending || initializing) {
       return;
@@ -493,11 +493,6 @@ function Chat() {
       // The server auto-titles the session from the first message AFTER this
       // request — nudge the sidebar to refetch, or it shows "New Chat" forever.
       window.dispatchEvent(new Event("najda:sessions-refresh"));
-
-      if (speakBack && res.assistant_message?.content) {
-        // Fire-and-forget: voice reply plays when ready, text is already shown.
-        speakReply(res.assistant_message.content);
-      }
     } catch (err) {
       console.error("Failed to send chat message:", err);
       setError(getApiErrorKey(err instanceof Error ? err.message : ""));
@@ -516,82 +511,45 @@ function Chat() {
   }
 
   /* ================================================= */
-  /* VOICE INPUT */
+  /* LIVE VOICE (mic = in-chat call) */
   /* ================================================= */
 
-  function toggleListening() {
-    if (!speechSupported) {
+  async function toggleLiveVoice() {
+    if (liveActive) {
+      endLive();
+      return;
+    }
+    if (initializing) {
       return;
     }
 
-    if (listening) {
-      recognitionRef.current?.stop();
-      return;
-    }
-
-    // Starting a new voice turn interrupts any reply still being spoken.
-    audioRef.current?.pause();
-    setSpeaking(false);
-    finalTranscriptRef.current = "";
-
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = "ar-EG";
-    recognition.interimResults = true;
-    // Keep listening through natural mid-sentence pauses — the browser's
-    // default single-utterance mode cuts the mic "on its own" (user report).
-    recognition.continuous = true;
-
-    recognition.onresult = (event) => {
-      let transcript = "";
-
-      for (let i = 0; i < event.results.length; i += 1) {
-        transcript += event.results[i][0].transcript;
-      }
-
-      setInput(transcript);
-      finalTranscriptRef.current = transcript;
-
-      // ~3s of silence after the last heard words = the turn is over → stop,
-      // which fires onend and auto-sends. Each new result resets the clock.
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        try {
-          recognition.stop();
-        } catch {
-          /* already stopped */
+    let activeSessionId = sessionId;
+    try {
+      if (!activeSessionId) {
+        const data = await createSession(
+          isEmergencyMode ? "emergency" : "normal"
+        );
+        activeSessionId = data?.session?.id ?? data?.id;
+        selfCreatedSession.current = activeSessionId;
+        setSessionId(activeSessionId);
+        if (data?.emergency_event) {
+          setEmergencyEvent(data.emergency_event);
         }
-      }, 3000);
-    };
-
-    recognition.onerror = () => {
-      clearTimeout(silenceTimerRef.current);
-      finalTranscriptRef.current = "";
-      setListening(false);
-    };
-
-    recognition.onend = () => {
-      clearTimeout(silenceTimerRef.current);
-      setListening(false);
-      // Voice conversation: the finished utterance sends itself, and the
-      // reply comes back as spoken Egyptian audio + text in the thread.
-      const spoken = finalTranscriptRef.current.trim();
-      finalTranscriptRef.current = "";
-      if (spoken) {
-        setInput("");
-        handleSend(spoken, { voice: true });
+        setSearchParams(
+          isEmergencyMode
+            ? { mode: "emergency", session: String(activeSessionId) }
+            : { session: String(activeSessionId) },
+          { replace: true }
+        );
       }
-    };
+    } catch (err) {
+      console.error("Failed to start live voice session:", err);
+      setError(getApiErrorKey(err instanceof Error ? err.message : ""));
+      return;
+    }
 
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
+    startLive(activeSessionId);
   }
-
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.stop();
-    };
-  }, []);
 
   /* ================================================= */
   /* DERIVED STATE */
@@ -672,16 +630,13 @@ function Chat() {
             )}
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setShowLiveCall(true)}
-              title={t("chat.startLiveCall")}
-              aria-label={t("chat.startLiveCall")}
-              className="rounded-full p-2 text-[19px] leading-none transition hover:bg-gray-50"
-            >
-              📞
-            </button>
+          <div className="flex items-center gap-2">
+            {liveActive && (
+              <span className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-[#0F8A66]">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#19A878]" />
+                {t(`liveCall.status.${liveStatus}`)}
+              </span>
+            )}
 
             <button
               type="button"
@@ -698,8 +653,6 @@ function Chat() {
             <ProfileReminderBanner />
           </div>
         )}
-
-        {showLiveCall && <LiveCall onClose={() => setShowLiveCall(false)} />}
 
         {/* Countdown / Escalated card — driven by the event itself, so an
             emergency caught in a NORMAL chat gets the same safety flow. */}
@@ -893,10 +846,20 @@ function Chat() {
         {/* Message Input */}
         <div className="border-t border-gray-100 bg-white px-5 py-5">
           <div className="mx-auto max-w-[850px]">
-            {speaking && (
+            {liveStatus === "mic-denied" && (
+              <div className="mb-2 text-center text-[12px] font-medium text-red-600">
+                {t("liveCall.errors.microphone")}
+              </div>
+            )}
+            {liveStatus === "error" && (
+              <div className="mb-2 text-center text-[12px] font-medium text-red-600">
+                {t("liveCall.errors.audioSetup")}
+              </div>
+            )}
+            {liveActive && (
               <div className="mb-2 flex items-center justify-center gap-2 text-[12px] font-medium text-[#1AA681]">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#1AA681]" />
-                {t("chat.speaking")} 🔊
+                {t("liveCall.readyPrompt")} 🎙️
               </div>
             )}
             <div className="flex items-center gap-3 rounded-[14px] border border-[#54C9AB] bg-white px-4 py-2 shadow-[0_3px_15px_rgba(0,0,0,0.03)]">
@@ -910,32 +873,30 @@ function Chat() {
                 className="flex-1 bg-transparent px-1 py-2 text-[13px] text-[#243A42] outline-none placeholder:text-[#89979C]"
               />
 
-              {speechSupported && (
-                <button
-                  type="button"
-                  onClick={toggleListening}
-                  title={listening ? t("chat.stopVoice") : t("chat.startVoice")}
-                  aria-label={listening ? t("chat.stopVoice") : t("chat.startVoice")}
-                  className={`
-                    flex
-                    h-8
-                    w-8
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    transition-all
-                    duration-200
-                    ${
-                      listening
-                        ? "bg-red-50 text-red-500"
-                        : "text-[#5B7278] hover:bg-gray-50"
-                    }
-                  `}
-                >
-                  {listening ? <LuMicOff size={16} /> : <LuMic size={16} />}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={toggleLiveVoice}
+                title={liveActive ? t("liveCall.end") : t("chat.startLiveCall")}
+                aria-label={liveActive ? t("liveCall.end") : t("chat.startLiveCall")}
+                className={`
+                  flex
+                  h-8
+                  w-8
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  transition-all
+                  duration-200
+                  ${
+                    liveActive
+                      ? "animate-pulse bg-red-50 text-red-500"
+                      : "text-[#5B7278] hover:bg-gray-50"
+                  }
+                `}
+              >
+                {liveActive ? <LuMicOff size={16} /> : <LuMic size={16} />}
+              </button>
 
               <button
                 type="button"

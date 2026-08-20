@@ -4,14 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "vad:assets": "node scripts/copy-vad-assets.mjs",
+    "predev": "npm run vad:assets",
     "dev": "vite",
+    "prebuild": "npm run vad:assets",
     "build": "vite build",
     "lint": "eslint .",
+    "prepreview": "npm run vad:assets",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:i18n": "node --test tests/i18n/*.test.js"
   },
   "dependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
     "@tailwindcss/vite": "^4.3.3",
     "i18next": "^26.3.6",
     "lucide-react": "^1.31.0",

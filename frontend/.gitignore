@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Silero-VAD runtime assets — staged from node_modules by
+# scripts/copy-vad-assets.mjs on predev/prebuild, never edited by hand.
+public/vad
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
