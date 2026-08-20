@@ -186,11 +186,22 @@ def _build_config():
         system_instruction=types.Content(
             parts=[types.Part(text=LIVE_CALL_SYSTEM_PROMPT)]
         ),
-        # Empty configs = "on, auto-detect language". Without these the
-        # session returns audio only and the on-screen transcript stays
-        # blank.
-        input_audio_transcription=types.AudioTranscriptionConfig(),
-        output_audio_transcription=types.AudioTranscriptionConfig(),
+        # Transcription language auto-detect flapped to random languages
+        # (French/Chinese fragments observed live) on short Egyptian
+        # utterances — pin it to our two supported languages, and bias the
+        # recognizer toward the medical-Egyptian vocabulary of this product.
+        input_audio_transcription=types.AudioTranscriptionConfig(
+            language_codes=["ar-EG", "en-US"],
+            adaptation_phrases=[
+                "صداع", "زغللة", "تنميل", "دراعي الشمال", "ضيق نفس",
+                "مش قادر أتنفس", "ألم في صدري", "عرقان", "دوخة", "وشي وارم",
+                "سخونة", "اتصل بالإسعاف", "123", "نجدة", "أنا بخير",
+                "اقفل المكالمة", "مش قادر أتحرك", "لوحدي",
+            ],
+        ),
+        output_audio_transcription=types.AudioTranscriptionConfig(
+            language_codes=["ar-EG", "en-US"],
+        ),
         # Default VAD waits too long after the user stops talking (felt as
         # "delay" in live testing) — detect end-of-speech aggressively and
         # start answering after ~0.5s of silence instead of ~1s.
