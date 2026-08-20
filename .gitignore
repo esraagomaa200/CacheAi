@@ -36,3 +36,6 @@ frontend/playwright-report/
 
 # TTS voice audition samples (local only)
 voice-samples/
+
+# private secrets bundle (never commit)
+team-secrets/
