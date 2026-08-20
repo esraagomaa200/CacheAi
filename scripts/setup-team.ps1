@@ -61,6 +61,6 @@ Pop-Location
 
 Write-Host "`n== Setup complete. Run these in three terminals ==" -ForegroundColor Green
 Write-Host "1) NAJDA engine :  cd app ; `$env:PYTHONIOENCODING='utf-8'; `$env:GEMINI_NORMALIZER_ENABLED='false'; ..\.venv\Scripts\python -m uvicorn main:app --port 8001"
-Write-Host "2) Backend      :  cd backend ; `$env:PYTHONIOENCODING='utf-8'; .venv\Scripts\python -m uvicorn main:app --port 8000"
+Write-Host "2) Backend      :  cd backend ; `$env:PYTHONIOENCODING='utf-8'; .\.venv\Scripts\python -m uvicorn main:app --port 8000"
 Write-Host "3) Frontend     :  cd frontend ; npm run dev -- --port 3000"
 Write-Host "Then open http://localhost:3000  (demo user: demo@cacheai.com / Demo12345!)"
