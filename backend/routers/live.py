@@ -186,22 +186,13 @@ def _build_config():
         system_instruction=types.Content(
             parts=[types.Part(text=LIVE_CALL_SYSTEM_PROMPT)]
         ),
-        # Transcription language auto-detect flapped to random languages
-        # (French/Chinese fragments observed live) on short Egyptian
-        # utterances — pin it to our two supported languages, and bias the
-        # recognizer toward the medical-Egyptian vocabulary of this product.
-        input_audio_transcription=types.AudioTranscriptionConfig(
-            language_codes=["ar-EG", "en-US"],
-            adaptation_phrases=[
-                "صداع", "زغللة", "تنميل", "دراعي الشمال", "ضيق نفس",
-                "مش قادر أتنفس", "ألم في صدري", "عرقان", "دوخة", "وشي وارم",
-                "سخونة", "اتصل بالإسعاف", "123", "نجدة", "أنا بخير",
-                "اقفل المكالمة", "مش قادر أتحرك", "لوحدي",
-            ],
-        ),
-        output_audio_transcription=types.AudioTranscriptionConfig(
-            language_codes=["ar-EG", "en-US"],
-        ),
+        # Empty configs = "on, auto-detect language". ⚠️ Do NOT add
+        # language_codes/adaptation_phrases here: the session accepts them at
+        # setup but DIES on the first audio turn (measured live — reconnect
+        # loop after every utterance). Language flapping is instead mitigated
+        # upstream by the Silero gate (noise never reaches the recognizer).
+        input_audio_transcription=types.AudioTranscriptionConfig(),
+        output_audio_transcription=types.AudioTranscriptionConfig(),
         # Default VAD waits too long after the user stops talking (felt as
         # "delay" in live testing) — detect end-of-speech aggressively and
         # start answering after ~0.5s of silence instead of ~1s.
@@ -395,9 +386,10 @@ async def live_call(ws: WebSocket) -> None:
         return
     except asyncio.CancelledError:
         raise
-    except Exception:
-        # Never let a live-call failure bubble into the app. The browser
-        # gets a readable Arabic reason; the socket closes either way.
+    except Exception as exc:
+        # Never let a live-call failure bubble into the app — but LOG it,
+        # or reconnect loops are undiagnosable (never user content).
+        print(f"[live] call failed: {type(exc).__name__}: {str(exc)[:300]}")
         try:
             await ws.send_json(
                 {
