@@ -137,6 +137,21 @@ function Chat() {
     window.dispatchEvent(new Event("najda:sessions-refresh"));
   }, []);
 
+  // Source chips for a spoken turn arrive right after its turn boundary —
+  // attach them to the newest assistant bubble of the live call.
+  const handleLiveSources = useCallback((sources) => {
+    setMessages((prev) => {
+      for (let i = prev.length - 1; i >= 0; i -= 1) {
+        if (prev[i].live && prev[i].sender === "assistant") {
+          const next = [...prev];
+          next[i] = { ...next[i], sources };
+          return next;
+        }
+      }
+      return prev;
+    });
+  }, []);
+
   const {
     status: liveStatus,
     start: startLive,
@@ -145,6 +160,7 @@ function Chat() {
   } = useLiveVoice({
     onTranscript: handleLiveTranscript,
     onTurnComplete: sealLiveBubbles,
+    onSources: handleLiveSources,
   });
   const liveActive = LIVE_ACTIVE_STATUSES.includes(liveStatus);
 

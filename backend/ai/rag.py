@@ -141,37 +141,79 @@ def write_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
     return len(points)
 
 
+def _payload_to_chunk(payload: dict, score: float) -> dict:
+    return {
+        "title": payload.get("title", ""),
+        "org": payload.get("org", ""),
+        "url": payload.get("url", ""),
+        "condition": payload.get("condition", ""),
+        "text": payload.get("text", ""),
+        "score": score,
+    }
+
+
+def _tokenize(text: str) -> set[str]:
+    import re
+
+    return {w for w in re.findall(r"[\w؀-ۿ]+", (text or "").lower()) if len(w) > 2}
+
+
+def _keyword_search(query: str, k: int) -> list[dict]:
+    """Embedding-free fallback: token-overlap scoring over the whole local
+    collection. Exists so a dead Gemini embeddings quota degrades retrieval
+    quality instead of silently stripping every answer of its sources —
+    the corpus is small (tens of chunks), a full scan is cheap."""
+    client = get_qdrant_client()
+    query_tokens = _tokenize(query)
+    if not query_tokens:
+        return []
+
+    points, _ = client.scroll(
+        collection_name=COLLECTION_NAME, limit=1000, with_payload=True
+    )
+    scored = []
+    for point in points:
+        payload = point.payload or {}
+        doc_tokens = _tokenize(f"{payload.get('title', '')} {payload.get('text', '')}")
+        overlap = len(query_tokens & doc_tokens)
+        if overlap:
+            scored.append((overlap / len(query_tokens), payload))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [_payload_to_chunk(payload, score) for score, payload in scored[:k]]
+
+
 def search(query: str, k: int = 4) -> list[dict]:
     """Return up to k relevant chunks as {title, org, url, condition, text, score}.
 
-    Resilient by design: an empty/missing collection (corpus not ingested
-    yet) or any lookup error returns an empty list rather than raising, so
-    the agent can still answer without grounding instead of failing outright.
+    Resilient by design: vector search first; if the query embedding fails
+    (Gemini quota/network), fall back to local keyword search so answers
+    keep their source grounding. An empty/missing collection (corpus not
+    ingested yet) or a total failure returns an empty list rather than
+    raising, so the agent can still answer instead of failing outright.
     """
     try:
         client = get_qdrant_client()
         if not client.collection_exists(COLLECTION_NAME):
             return []
+    except Exception as exc:
+        print(f"[rag] qdrant unavailable: {type(exc).__name__}: {str(exc)[:200]}")
+        return []
 
+    try:
         vector = embed_query(query)
         result = client.query_points(
             collection_name=COLLECTION_NAME,
             query=vector,
             limit=k,
         )
-        chunks = []
-        for point in result.points:
-            payload = point.payload or {}
-            chunks.append(
-                {
-                    "title": payload.get("title", ""),
-                    "org": payload.get("org", ""),
-                    "url": payload.get("url", ""),
-                    "condition": payload.get("condition", ""),
-                    "text": payload.get("text", ""),
-                    "score": point.score,
-                }
-            )
-        return chunks
-    except Exception:
+        return [_payload_to_chunk(point.payload or {}, point.score) for point in result.points]
+    except Exception as exc:
+        # Never silent: a dead embedding path means degraded grounding — it
+        # must be visible in the server log, not swallowed.
+        print(f"[rag] vector search failed ({type(exc).__name__}: {str(exc)[:160]}) — keyword fallback")
+
+    try:
+        return _keyword_search(query, k)
+    except Exception as exc:
+        print(f"[rag] keyword fallback failed: {type(exc).__name__}: {str(exc)[:200]}")
         return []

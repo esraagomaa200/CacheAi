@@ -26,6 +26,7 @@ import os
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ai import rag  # reuses env loading + GEMINI_API_KEY handling
+from ai.agent import _is_smalltalk
 from ai.prompts import LIVE_CALL_SYSTEM_PROMPT
 from database import SessionLocal
 from models import ChatSession, Message, User
@@ -80,18 +81,50 @@ class TranscriptRecorder:
         if self.enabled and text:
             self._assistant_buf.append(text)
 
-    async def flush(self) -> None:
+    async def flush(self) -> list[dict]:
+        """Persist the buffered turn. Returns the trusted-source list that
+        was attached to the assistant's reply (empty when there is none),
+        so the caller can push it to the browser as live source chips."""
         if not self.enabled:
-            return
+            return []
         user_text = "".join(self._user_buf).strip()
         assistant_text = "".join(self._assistant_buf).strip()
         self._user_buf.clear()
         self._assistant_buf.clear()
         if not user_text and not assistant_text:
-            return
-        await asyncio.to_thread(self._flush_sync, user_text, assistant_text)
+            return []
+        return await asyncio.to_thread(self._flush_sync, user_text, assistant_text)
 
-    def _flush_sync(self, user_text: str, assistant_text: str) -> None:
+    @staticmethod
+    def _turn_sources(user_text: str, assistant_text: str) -> list[dict]:
+        """Closest trusted corpus sources for a spoken turn.
+
+        The live model isn't RAG-grounded (its protocol lives in the system
+        prompt, which was built from the same corpus), so each reply gets
+        the corpus documents its guidance maps to. Greetings get none, and
+        retrieval failing must never affect the call."""
+        query = user_text or assistant_text
+        if not assistant_text or _is_smalltalk(query):
+            return []
+        try:
+            chunks = rag.search(f"{query}\n{assistant_text}"[:1000], k=2)
+        except Exception:
+            return []
+        sources, seen = [], set()
+        for chunk in chunks:
+            title = chunk.get("title", "")
+            if not title or title in seen:
+                continue
+            seen.add(title)
+            sources.append({
+                "title": title,
+                "org": chunk.get("org", ""),
+                "url": chunk.get("url", ""),
+            })
+        return sources
+
+    def _flush_sync(self, user_text: str, assistant_text: str) -> list[dict]:
+        sources = self._turn_sources(user_text, assistant_text)
         db = SessionLocal()
         try:
             if user_text:
@@ -110,11 +143,14 @@ class TranscriptRecorder:
                     chat_session_id=self.session_id,
                     sender="assistant",
                     content=assistant_text,
+                    sources=sources,
                 ))
             db.commit()
+            return sources
         except Exception:
             # Persistence must never take the live call down with it.
             db.rollback()
+            return sources
         finally:
             db.close()
 
@@ -308,7 +344,9 @@ async def _relay_server_message(
     # thing the user heard — persist it before the next turn begins.
     if getattr(server_content, "interrupted", False):
         await ws.send_json({"type": "interrupted"})
-        await recorder.flush()
+        sources = await recorder.flush()
+        if sources:
+            await ws.send_json({"type": "sources", "sources": sources})
 
     user_text = getattr(server_content, "input_transcription", None)
     if user_text is not None and user_text.text:
@@ -338,7 +376,9 @@ async def _relay_server_message(
     # uses to seal a bubble instead of appending forever.
     if getattr(server_content, "turn_complete", False):
         await ws.send_json({"type": "turn_complete"})
-        await recorder.flush()
+        sources = await recorder.flush()
+        if sources:
+            await ws.send_json({"type": "sources", "sources": sources})
 
 
 async def _run_call(ws: WebSocket, recorder: TranscriptRecorder) -> None:

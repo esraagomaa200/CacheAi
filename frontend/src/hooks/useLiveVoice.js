@@ -68,7 +68,7 @@ function floatTo16(frame) {
   return pcm;
 }
 
-export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus }) {
+export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus, onSources }) {
   const [status, setStatus] = useState("idle");
 
   const wsRef = useRef(null);
@@ -111,11 +111,13 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
   const statusRef = useRef(onStatus);
   const transcriptRef = useRef(onTranscript);
   const turnCompleteRef = useRef(onTurnComplete);
+  const sourcesRef = useRef(onSources);
   useEffect(() => {
     statusRef.current = onStatus;
     transcriptRef.current = onTranscript;
     turnCompleteRef.current = onTurnComplete;
-  }, [onStatus, onTranscript, onTurnComplete]);
+    sourcesRef.current = onSources;
+  }, [onStatus, onTranscript, onTurnComplete, onSources]);
 
   const [lastError, setLastError] = useState("");
 
@@ -431,6 +433,13 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
           handleUserTranscriptForCommands(payload.text);
         }
         transcriptRef.current?.(payload.role, payload.text);
+      } else if (payload.type === "sources") {
+        // Trusted-source chips for the assistant turn that just sealed —
+        // computed server-side after the turn boundary, so they always
+        // arrive right after the matching turn_complete/interrupted.
+        if (Array.isArray(payload.sources) && payload.sources.length > 0) {
+          sourcesRef.current?.(payload.sources);
+        }
       } else if (payload.type === "interrupted") {
         stopPlayback();
         // A barge-in aborts the turn in flight — its audio no longer counts

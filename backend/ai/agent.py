@@ -129,6 +129,23 @@ def _route(user_content: str) -> str:
     return "triage"
 
 
+def _retrieval_query(history: list[dict], user_content: str) -> str:
+    """Retrieval query = the current turn PLUS recent user turns.
+
+    A follow-up like "من امبارح" carries no symptom by itself — the symptom
+    lives a message or two back, and searching on the bare follow-up used to
+    retrieve unrelated chunks (or nothing relevant to cite)."""
+    parts = [
+        (msg.get("content") or "").strip()
+        for msg in (history or [])[-RISK_HISTORY_TURNS:]
+        if msg.get("sender") == "user" and (msg.get("content") or "").strip()
+    ]
+    current = (user_content or "").strip()
+    if current and (not parts or parts[-1] != current):
+        parts.append(current)
+    return "\n".join(parts)[-1000:]
+
+
 def _build_contents(history: list[dict], user_content: str) -> str:
     lines = []
     for msg in history or []:
@@ -211,8 +228,11 @@ def _get_groq_client():
 def _parse_triage_json(raw: str, chunks: list[dict]) -> dict:
     """Parse + validate a triage-shaped JSON response (Gemini or Groq).
 
-    Raises if the JSON is malformed or the answer is empty — callers decide
-    what to do next (try another engine, or give up to _fallback()).
+    Raises if the JSON is malformed, the answer is empty, or the engine
+    cited no source while sources were attached — an uncited medical answer
+    violates the product contract (every medical reply carries a visible
+    trusted source), so the caller moves on to the next engine instead of
+    shipping it.
     """
     parsed = json.loads(raw)
 
@@ -229,6 +249,8 @@ def _parse_triage_json(raw: str, chunks: list[dict]) -> dict:
         condition = "unknown"
 
     sources = _map_sources(parsed.get("used_sources"), chunks)
+    if chunks and not sources:
+        raise ValueError("engine cited no valid source while chunks were attached")
 
     return {
         "content": answer_text,
@@ -238,22 +260,86 @@ def _parse_triage_json(raw: str, chunks: list[dict]) -> dict:
     }
 
 
-def _call_groq_triage(system_prompt: str, contents: str, model: str | None = None) -> str:
+# Groq models that support response_format=json_schema with strict=True —
+# for these, the non-empty used_sources contract is enforced structurally,
+# not just via prompt text (qwen only supports json_object).
+_GROQ_STRICT_MODELS = {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}
+
+
+def _groq_response_format(model: str, num_chunks: int) -> dict:
+    """Strict JSON schema mirroring RESPONSE_SCHEMA, with used_sources
+    constrained to the attached chunk numbers — minItems=1 when sources are
+    attached, so a citation-less answer can't even be generated."""
+    if model not in _GROQ_STRICT_MODELS:
+        return {"type": "json_object"}
+
+    if num_chunks:
+        used_sources = {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1, "maximum": num_chunks},
+            "minItems": 1,
+        }
+    else:
+        used_sources = {"type": "array", "items": {"type": "integer"}, "maxItems": 0}
+
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "triage_answer",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "answer": {"type": "string", "minLength": 1},
+                    "used_sources": used_sources,
+                    "risk_level": {"type": "string", "enum": sorted(RISK_LEVELS)},
+                    "condition": {"type": "string", "enum": sorted(CONDITIONS)},
+                },
+                "required": ["answer", "used_sources", "risk_level", "condition"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def _call_groq_triage(
+    system_prompt: str, contents: str, model: str | None = None, num_chunks: int = 0
+) -> str:
     """Groq triage call for a specific model (default: the big triage model).
 
-    Groq's response_format=json_object only guarantees valid JSON, not a
-    specific shape (unlike Gemini's response_schema), so the exact key
-    contract is restated right before the user turn to maximize compliance.
+    Tries the strict json_schema format first (shape + non-empty citations
+    enforced server-side); if Groq rejects the schema request, retries the
+    SAME model with json_object + the restated key contract, and
+    _parse_triage_json still enforces the citation rule after the fact.
     """
     client = _get_groq_client()
+    target_model = model or GROQ_TRIAGE_MODEL
+    messages = [
+        {"role": "system", "content": system_prompt + "\n\n" + prompts.GROQ_TRIAGE_JSON_SUFFIX},
+        {"role": "user", "content": contents},
+    ]
+
+    response_format = _groq_response_format(target_model, num_chunks)
+    if response_format["type"] == "json_schema":
+        try:
+            completion = client.chat.completions.create(
+                model=target_model,
+                temperature=0,
+                response_format=response_format,
+                messages=messages,
+            )
+            return completion.choices[0].message.content or ""
+        except Exception as exc:
+            print(
+                f"[router] {target_model} json_schema rejected "
+                f"({type(exc).__name__}: {str(exc)[:120]}) — retrying json_object"
+            )
+
     completion = client.chat.completions.create(
-        model=model or GROQ_TRIAGE_MODEL,
+        model=target_model,
         temperature=0,
         response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system_prompt + "\n\n" + prompts.GROQ_TRIAGE_JSON_SUFFIX},
-            {"role": "user", "content": contents},
-        ],
+        messages=messages,
     )
     return completion.choices[0].message.content or ""
 
@@ -277,9 +363,13 @@ def _triage_answer(
         # can die) must NOT kill the tier: degrade to no sources and let the
         # Groq/Gemini answer engines still respond.
         try:
-            chunks = [] if _is_smalltalk(user_content) else rag.search(user_content, k=4)
+            if _is_smalltalk(user_content):
+                chunks = []
+            else:
+                chunks = rag.search(_retrieval_query(history, user_content), k=4)
         except Exception:
             chunks = []
+        print(f"[router] retrieval chunks={len(chunks)}")
         system_prompt = prompts.build_system_prompt(profile_ctx, chunks, chat_type)
         contents = _build_contents(history, user_content)
 
@@ -289,7 +379,9 @@ def _triage_answer(
         groq_chain = [GROQ_TRIAGE_MODEL, GROQ_SMALLTALK_MODEL, "qwen/qwen3.6-27b"]
         for groq_model in dict.fromkeys(groq_chain):
             try:
-                raw = _call_groq_triage(system_prompt, contents, model=groq_model)
+                raw = _call_groq_triage(
+                    system_prompt, contents, model=groq_model, num_chunks=len(chunks)
+                )
                 return _parse_triage_json(raw, chunks), f"groq:{groq_model.split('/')[-1]}"
             except Exception as exc:
                 # Never log user content — engine + error class/message only.
@@ -449,9 +541,16 @@ def _clinical_answer(user_content: str, history: list[dict], chat_type: str) -> 
         if not content:
             return None
 
+        sources = _map_najda_sources(najda_result.get("sources"))
+        if not sources:
+            # grounded=True with no usable sources violates the "every
+            # medical reply carries a visible source" contract — let the
+            # triage tier (which enforces citations) answer instead.
+            return None
+
         return {
             "content": content,
-            "sources": _map_najda_sources(najda_result.get("sources")),
+            "sources": sources,
             "risk_level": risk["risk_level"],
             "condition": risk["condition"],
         }
