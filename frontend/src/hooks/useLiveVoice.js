@@ -44,6 +44,12 @@ const PRE_SPEECH_FRAMES = 12; // ~380ms of onset kept via ring buffer
 const REDEMPTION_FRAMES = 30; // ~1s of in-speech grace before closing
 const SPEECH_OPEN_THRESHOLD = 0.35; // easy to open…
 const SPEECH_HOLD_THRESHOLD = 0.2; // …hard to close (hysteresis)
+// While نجدة is speaking, opening the gate = interrupting him. Residual echo
+// past the AEC and natural backchannel sounds ("اه", "تمام") were cutting
+// replies mid-sentence — so during playback the gate demands a clearly
+// deliberate interjection: higher score AND ~100ms of sustained speech.
+const BARGE_OPEN_THRESHOLD = 0.6;
+const BARGE_CONSECUTIVE_FRAMES = 3;
 
 function wsUrl(sessionId) {
   const base = API_BASE_URL.startsWith("http")
@@ -83,6 +89,16 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
   // Voice hang-up + reconnect context restore need the recent transcript.
   const voiceCommandBufferRef = useRef("");
   const hangUpTimerRef = useRef(null);
+  // Farewell flow: a fixed timer cut نجدة off mid-goodbye — instead we mark
+  // the hang-up pending, let the goodbye turn complete, then close only
+  // after the last queued audio chunk actually finishes playing.
+  const pendingHangUpRef = useRef(false);
+  const goodbyeTurnDoneRef = useRef(false);
+  // Guards against closing on the WRONG turn_complete: the farewell usually
+  // interrupts a turn already in flight, and Gemini ends that aborted turn
+  // with its own interrupted→turn_complete pair. Only a turn that produced
+  // audio AFTER the farewell was detected counts as the goodbye.
+  const goodbyeSawReplyRef = useRef(false);
   const transcriptLogRef = useRef([]);
   const needsContextRestoreRef = useRef(false);
 
@@ -90,6 +106,7 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
   const inSpeechRef = useRef(false);
   const redemptionRef = useRef(0);
   const preRollRef = useRef([]);
+  const bargeStreakRef = useRef(0);
 
   const statusRef = useRef(onStatus);
   const transcriptRef = useRef(onTranscript);
@@ -109,6 +126,10 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
 
   const stopPlayback = useCallback(() => {
     scheduledRef.current.forEach((source) => {
+      // Detach onended first: a FORCED stop (interruption, socket drop) must
+      // never run the farewell drain check — only naturally finished audio
+      // counts as "the goodbye played out".
+      source.onended = null;
       try {
         source.stop();
       } catch {
@@ -145,7 +166,21 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
     nextStartTimeRef.current += buffer.duration;
 
     scheduledRef.current.add(source);
-    source.onended = () => scheduledRef.current.delete(source);
+    if (pendingHangUpRef.current) {
+      goodbyeSawReplyRef.current = true;
+    }
+    source.onended = () => {
+      scheduledRef.current.delete(source);
+      if (
+        pendingHangUpRef.current &&
+        goodbyeTurnDoneRef.current &&
+        scheduledRef.current.size === 0
+      ) {
+        pendingHangUpRef.current = false;
+        clearTimeout(hangUpTimerRef.current);
+        hangUpTimerRef.current = setTimeout(() => hangUpRef.current?.(), 400);
+      }
+    };
   }, []);
 
   const teardown = useCallback(() => {
@@ -200,6 +235,9 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
 
     transcriptLogRef.current = [];
     voiceCommandBufferRef.current = "";
+    pendingHangUpRef.current = false;
+    goodbyeTurnDoneRef.current = false;
+    goodbyeSawReplyRef.current = false;
     needsContextRestoreRef.current = false;
     inSpeechRef.current = false;
     redemptionRef.current = 0;
@@ -214,11 +252,15 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
 
   const hangUpRef = useRef(hangUp);
   useEffect(() => {
+    // Standard latest-ref pattern (same as connectSocketRef below): the
+    // playback drain check must call the newest hangUp from inside stable
+    // callbacks without depending on it.
+    // eslint-disable-next-line react-hooks/immutability
     hangUpRef.current = hangUp;
   }, [hangUp]);
 
   const handleUserTranscriptForCommands = useCallback((text) => {
-    if (hangUpTimerRef.current) {
+    if (pendingHangUpRef.current) {
       return;
     }
     const normalized = (voiceCommandBufferRef.current + text)
@@ -229,9 +271,24 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
     const wantsHangUp =
       /(اقفل|قفل|انهي|انه)[^.]{0,15}(المكالمه|مكالمه)/.test(normalized) ||
       /(اقفل|انهي)\s*(يا\s*)?نجد[هة]?/.test(normalized) ||
-      /خلاص\s*اقفل/.test(normalized);
+      /خلاص\s*اقفل/.test(normalized) ||
+      // Natural farewells end the call too. Deliberately unambiguous forms
+      // only: "مع السلامه" (never bare "سلام" — it lives inside "سلامتك"),
+      // "خلاص شكرا"/"شكرا خلاص", and doubled "باي باي" — never a single
+      // "باي": ASR streams fragments, so a lone "باي" arms the hang-up
+      // before "…باس" (bypass) or "…بولار" (bipolar) arrives.
+      /مع\s*السلام[هة]/.test(normalized) ||
+      /خلاص\s*شكرا|شكرا\s*خلاص/.test(normalized) ||
+      /(^|\s)باي\s+باي(\s|$)/.test(normalized);
     if (wantsHangUp) {
-      hangUpTimerRef.current = setTimeout(() => hangUpRef.current?.(), 2500);
+      // Don't close on a timer — wait for نجدة's spoken goodbye: the turn
+      // must complete AND its audio must finish playing (drain check lives
+      // in playChunk.onended + the turn_complete handler). The timer here
+      // is only a backstop for when no reply ever arrives.
+      pendingHangUpRef.current = true;
+      goodbyeTurnDoneRef.current = false;
+      goodbyeSawReplyRef.current = false;
+      hangUpTimerRef.current = setTimeout(() => hangUpRef.current?.(), 10000);
     }
   }, []);
 
@@ -260,14 +317,35 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
       // Hysteresis: opening needs a clear speech score, but once open, even
       // soft continuation keeps the gate open — Arabic soft syllables and
       // breathy phrase endings must not be clipped.
+      const botSpeaking = scheduledRef.current.size > 0;
+      const openThreshold = botSpeaking
+        ? BARGE_OPEN_THRESHOLD
+        : SPEECH_OPEN_THRESHOLD;
       const threshold = inSpeechRef.current
         ? SPEECH_HOLD_THRESHOLD
-        : SPEECH_OPEN_THRESHOLD;
-      const isSpeech = probabilities.isSpeech >= threshold;
+        : openThreshold;
+      let isSpeech = probabilities.isSpeech >= threshold;
+
+      // Opening WHILE نجدة speaks = interrupting him. Demand sustained
+      // deliberate speech, not a single hot frame from echo/backchannel.
+      if (isSpeech && !inSpeechRef.current && botSpeaking) {
+        bargeStreakRef.current += 1;
+        if (bargeStreakRef.current < BARGE_CONSECUTIVE_FRAMES) {
+          preRollRef.current.push(frame.slice());
+          if (preRollRef.current.length > PRE_SPEECH_FRAMES) {
+            preRollRef.current.shift();
+          }
+          sendZeros(frame.length);
+          return;
+        }
+      } else if (!isSpeech) {
+        bargeStreakRef.current = 0;
+      }
 
       if (isSpeech) {
         if (!inSpeechRef.current) {
           inSpeechRef.current = true;
+          bargeStreakRef.current = 0;
           preRollRef.current.forEach((buffered) => sendFrame(buffered));
           preRollRef.current = [];
         }
@@ -355,6 +433,14 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
         transcriptRef.current?.(payload.role, payload.text);
       } else if (payload.type === "interrupted") {
         stopPlayback();
+        // A barge-in aborts the turn in flight — its audio no longer counts
+        // as the goodbye, and the aborted turn's own turn_complete must not
+        // close the call. Wait for a fresh reply instead.
+        goodbyeTurnDoneRef.current = false;
+        goodbyeSawReplyRef.current = false;
+        // Turn boundary: drop stale command text so fragments from separate
+        // utterances can't concatenate into a phantom farewell.
+        voiceCommandBufferRef.current = "";
         transcriptLogRef.current.forEach((l) => {
           l.sealed = true;
         });
@@ -364,6 +450,19 @@ export default function useLiveVoice({ onTranscript, onTurnComplete, onStatus })
           l.sealed = true;
         });
         turnCompleteRef.current?.();
+        voiceCommandBufferRef.current = "";
+        // Only a turn that actually produced audio after the farewell is
+        // the goodbye — an aborted turn's trailing turn_complete is not.
+        if (pendingHangUpRef.current && goodbyeSawReplyRef.current) {
+          goodbyeTurnDoneRef.current = true;
+          if (scheduledRef.current.size === 0) {
+            // Goodbye turn ended with nothing left in the queue (already
+            // played out) — close now instead of waiting for onended.
+            pendingHangUpRef.current = false;
+            clearTimeout(hangUpTimerRef.current);
+            hangUpTimerRef.current = setTimeout(() => hangUpRef.current?.(), 400);
+          }
+        }
       }
     };
 
